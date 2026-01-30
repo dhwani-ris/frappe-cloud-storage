@@ -27,9 +27,7 @@ class S3Backend(CloudStorageBackend):
 				"config": Config(signature_version="s3v4"),
 			}
 			aws_key = self.config.get("s3_aws_key")
-			raw = frappe.db.get_value(
-				"Cloud Storage Configuration", "Cloud Storage Configuration", "s3_aws_secret"
-			)
+			raw = frappe.db.get_single_value("Cloud Storage Configuration", "s3_aws_secret")
 			aws_secret = None
 			if raw:
 				try:

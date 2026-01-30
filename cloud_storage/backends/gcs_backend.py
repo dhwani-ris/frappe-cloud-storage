@@ -22,9 +22,7 @@ class GCSBackend(CloudStorageBackend):
 	@property
 	def client(self):
 		if self._client is None:
-			raw = frappe.db.get_value(
-				"Cloud Storage Configuration", "Cloud Storage Configuration", "gcs_credentials_json"
-			)
+			raw = frappe.db.get_single_value("Cloud Storage Configuration", "gcs_credentials_json")
 			if not raw or not raw.strip():
 				frappe.throw(frappe._("GCS Service Account JSON is required"))
 			try:
@@ -41,7 +39,7 @@ class GCSBackend(CloudStorageBackend):
 
 	def _bucket(self, bucket_type):
 		field = "gcs_public_bucket_name" if bucket_type == "public" else "gcs_private_bucket_name"
-		name = frappe.db.get_value("Cloud Storage Configuration", "Cloud Storage Configuration", field)
+		name = frappe.db.get_single_value("Cloud Storage Configuration", field)
 		if not name:
 			frappe.throw(frappe._("GCS {0} bucket name is not set").format(bucket_type))
 		return self.client.bucket(name)
@@ -80,13 +78,10 @@ class GCSBackend(CloudStorageBackend):
 	def delete(self, key, bucket_type="private"):
 		if not key:
 			return
-		delete_enabled = frappe.db.get_value(
-			"Cloud Storage Configuration", "Cloud Storage Configuration", "delete_file_from_cloud"
-		)
+		delete_enabled = frappe.db.get_single_value("Cloud Storage Configuration", "delete_file_from_cloud")
 		if not delete_enabled:
 			return
-		bucket_name = frappe.db.get_value(
-			"Cloud Storage Configuration",
+		bucket_name = frappe.db.get_single_value(
 			"Cloud Storage Configuration",
 			"gcs_public_bucket_name" if bucket_type == "public" else "gcs_private_bucket_name",
 		)

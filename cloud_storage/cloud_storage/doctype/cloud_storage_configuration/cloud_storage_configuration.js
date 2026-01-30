@@ -34,31 +34,57 @@ frappe.ui.form.on("Cloud Storage Configuration", {
 
 		frm.add_custom_button(__("Migrate Existing Files"), () => {
 			frappe.confirm(
-				__(
-					"This will upload all local files (/files/ and /private/files/) to cloud. Continue?"
-				),
+				__("Upload all local files (/files/ and /private/files/) to cloud. Continue?"),
 				() => {
 					frappe.call({
 						method: "cloud_storage.controller.migrate_existing_files",
 						freeze: true,
 						callback(r) {
-							if (r.message) {
-								const m = r.message;
-								const msg = __(
-									"Migrated {0} file(s). Skipped: {1}. Total File records: {2}."
-								).format(m.migrated || 0, m.skipped || 0, m.total || 0);
-								frappe.show_alert({ message: msg, indicator: "blue" });
-								if (m.errors && m.errors.length) {
-									frappe.msgprint({
-										title: __("Some files failed"),
-										message: m.errors
-											.map((e) => `${e.file}: ${e.error}`)
-											.join("<br>"),
-										indicator: "orange",
-									});
-								}
-								frm.reload_doc();
+							if (!r.message) return;
+							const m = r.message;
+							const migrated = m.migrated ?? 0;
+							const skipped = m.skipped ?? 0;
+							const total = m.total ?? 0;
+							frappe.show_alert({
+								message:
+									__("Migrated") +
+									` ${migrated} ` +
+									__("file(s). Skipped:") +
+									` ${skipped}. ` +
+									__("Total:") +
+									` ${total}.`,
+								indicator: "blue",
+							});
+							const details = [];
+							if (m.skipped_not_local_url)
+								details.push(__("Not local URL:") + " " + m.skipped_not_local_url);
+							if (m.skipped_no_url_or_cloud)
+								details.push(
+									__("No URL or on cloud:") + " " + m.skipped_no_url_or_cloud
+								);
+							if (m.skipped_file_not_found)
+								details.push(
+									__("File not on disk:") + " " + m.skipped_file_not_found
+								);
+							if (m.skipped_other)
+								details.push(__("Other / error:") + " " + m.skipped_other);
+							if (details.length) {
+								frappe.msgprint({
+									title: __("Migration details"),
+									message: details.join("<br>"),
+									indicator: "blue",
+								});
 							}
+							if (m.errors && m.errors.length) {
+								frappe.msgprint({
+									title: __("Some files failed"),
+									message: m.errors
+										.map((e) => `${e.file}: ${e.error}`)
+										.join("<br>"),
+									indicator: "orange",
+								});
+							}
+							frm.reload_doc();
 						},
 					});
 				}

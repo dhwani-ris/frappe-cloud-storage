@@ -26,9 +26,19 @@ class S3Backend(CloudStorageBackend):
 				"region_name": self.config.get("s3_region_name") or "us-east-1",
 				"config": Config(signature_version="s3v4"),
 			}
-			if self.config.get("s3_aws_key") and self.config.get("s3_aws_secret"):
-				kwargs["aws_access_key_id"] = self.config.s3_aws_key
-				kwargs["aws_secret_access_key"] = self.config.s3_aws_secret
+			aws_key = self.config.get("s3_aws_key")
+			raw = frappe.db.get_value(
+				"Cloud Storage Configuration", "Cloud Storage Configuration", "s3_aws_secret"
+			)
+			aws_secret = None
+			if raw:
+				try:
+					aws_secret = frappe.utils.password.decrypt(raw)
+				except Exception:
+					aws_secret = raw
+			if aws_key and aws_secret:
+				kwargs["aws_access_key_id"] = aws_key
+				kwargs["aws_secret_access_key"] = aws_secret
 			self._client = boto3.client("s3", **kwargs)
 		return self._client
 

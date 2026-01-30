@@ -22,9 +22,15 @@ class GCSBackend(CloudStorageBackend):
 	@property
 	def client(self):
 		if self._client is None:
-			creds_json = self.config.get("gcs_credentials_json")
-			if not creds_json or not creds_json.strip():
+			raw = frappe.db.get_value(
+				"Cloud Storage Configuration", "Cloud Storage Configuration", "gcs_credentials_json"
+			)
+			if not raw or not raw.strip():
 				frappe.throw(frappe._("GCS Service Account JSON is required"))
+			try:
+				creds_json = frappe.utils.password.decrypt(raw)
+			except Exception:
+				creds_json = raw
 			try:
 				info = json.loads(creds_json)
 			except json.JSONDecodeError:

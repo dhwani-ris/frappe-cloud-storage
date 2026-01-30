@@ -153,7 +153,7 @@ def _upload_existing_file(file_doc):
 		relative = path[len("/files/") :].lstrip("/")
 		file_path = frappe.utils.get_files_path(*relative.split("/"))
 	if not os.path.isfile(file_path):
-		return False
+		return "file_not_found"
 	parent_doctype = doc.attached_to_doctype or "File"
 	parent_name = doc.attached_to_name or ""
 	if hasattr(backend, "key_generator"):
@@ -192,30 +192,45 @@ def migrate_existing_files():
 		fields=["name", "file_url", "file_name", "is_private", "attached_to_doctype", "attached_to_name"],
 	)
 	migrated = 0
-	skipped = 0
+	skipped_no_url_or_cloud = 0
+	skipped_not_local = 0
+	skipped_file_not_found = 0
+	skipped_other = 0
 	errors = []
 	for f in files:
 		file_url = f.get("file_url")
 		if not file_url or _is_cloud_file_url(file_url):
-			skipped += 1
+			skipped_no_url_or_cloud += 1
 			continue
 		if not _is_local_file_url(file_url):
-			skipped += 1
+			skipped_not_local += 1
 			continue
 		try:
 			doc = frappe.get_doc("File", f["name"])
-			if _upload_existing_file(doc):
+			result = _upload_existing_file(doc)
+			if result is True:
 				migrated += 1
+			elif result == "file_not_found":
+				skipped_file_not_found += 1
 			else:
-				skipped += 1
+				skipped_other += 1
 		except Exception as e:
-			skipped += 1
+			skipped_other += 1
 			errors.append({"file": f["name"], "error": str(e)})
 			frappe.log_error(
 				title=f"Cloud Storage migrate: {f.get('name')}",
 				message=frappe.get_traceback(),
 			)
-	return {"migrated": migrated, "total": len(files), "skipped": skipped, "errors": errors[:10]}
+	return {
+		"migrated": migrated,
+		"total": len(files),
+		"skipped": skipped_no_url_or_cloud + skipped_not_local + skipped_file_not_found + skipped_other,
+		"skipped_no_url_or_cloud": skipped_no_url_or_cloud,
+		"skipped_not_local_url": skipped_not_local,
+		"skipped_file_not_found": skipped_file_not_found,
+		"skipped_other": skipped_other,
+		"errors": errors[:10],
+	}
 
 
 @frappe.whitelist()

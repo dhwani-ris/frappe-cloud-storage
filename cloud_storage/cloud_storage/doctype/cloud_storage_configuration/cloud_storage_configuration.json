@@ -110,7 +110,7 @@
   {
    "depends_on": "eval:doc.storage_provider=='Amazon S3'",
    "fieldname": "s3_aws_secret",
-   "fieldtype": "Password",
+   "fieldtype": "Data",
    "label": "Secret Access Key",
    "mandatory_depends_on": "eval:doc.enabled && doc.storage_provider=='Amazon S3'"
   },
@@ -156,7 +156,7 @@
  ],
  "issingle": 1,
  "links": [],
- "modified": "2026-01-30 12:02:29.032421",
+ "modified": "2026-01-30 12:54:46.332188",
  "modified_by": "Administrator",
  "module": "Cloud Storage",
  "name": "Cloud Storage Configuration",

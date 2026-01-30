@@ -40,9 +40,11 @@ class GCSBackend(CloudStorageBackend):
 		return self._client
 
 	def _bucket(self, bucket_type):
-		if bucket_type == "public":
-			return self.client.bucket(self.config.gcs_public_bucket_name)
-		return self.client.bucket(self.config.gcs_private_bucket_name)
+		field = "gcs_public_bucket_name" if bucket_type == "public" else "gcs_private_bucket_name"
+		name = frappe.db.get_value("Cloud Storage Configuration", "Cloud Storage Configuration", field)
+		if not name:
+			frappe.throw(frappe._("GCS {0} bucket name is not set").format(bucket_type))
+		return self.client.bucket(name)
 
 	def _strip_special_chars(self, file_name):
 		return "".join(c for c in file_name if c.isalnum() or c in "._- ").replace(" ", "_")
@@ -73,19 +75,33 @@ class GCSBackend(CloudStorageBackend):
 		bucket = self._bucket(bucket_type)
 		blob = bucket.blob(key)
 		blob.upload_from_filename(file_path, content_type=content_type)
-		if not is_private:
-			blob.make_public()
 		return key
 
 	def delete(self, key, bucket_type="private"):
-		if not self.config.delete_file_from_cloud:
+		if not key:
 			return
-		bucket = self._bucket(bucket_type)
+		delete_enabled = frappe.db.get_value(
+			"Cloud Storage Configuration", "Cloud Storage Configuration", "delete_file_from_cloud"
+		)
+		if not delete_enabled:
+			return
+		bucket_name = frappe.db.get_value(
+			"Cloud Storage Configuration",
+			"Cloud Storage Configuration",
+			"gcs_public_bucket_name" if bucket_type == "public" else "gcs_private_bucket_name",
+		)
+		if not bucket_name:
+			return
+		bucket = self.client.bucket(bucket_name)
 		try:
-			bucket.blob(key).delete()
+			bucket.delete_blob(key)
 		except gcs_exceptions.NotFound:
 			pass
 		except Exception as e:
+			frappe.log_error(
+				title="Cloud Storage GCS delete failed",
+				message=f"key={key!r} bucket_type={bucket_type} bucket={bucket_name}\n{frappe.get_traceback()}",
+			)
 			frappe.throw(frappe._("Could not delete file from cloud: {0}").format(str(e)))
 
 	def get_url(self, key, file_name=None, bucket_type="private"):

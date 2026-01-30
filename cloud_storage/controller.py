@@ -61,13 +61,14 @@ CONTENT_HASH_PUBLIC = "public:"
 
 
 def _parse_content_hash(content_hash):
-	if not content_hash:
+	if not content_hash or not isinstance(content_hash, str):
 		return None, "private"
-	if content_hash.startswith(CONTENT_HASH_PRIVATE):
-		return content_hash[len(CONTENT_HASH_PRIVATE) :], "private"
-	if content_hash.startswith(CONTENT_HASH_PUBLIC):
-		return content_hash[len(CONTENT_HASH_PUBLIC) :], "public"
-	return content_hash, "private"
+	s = content_hash.strip()
+	if s.startswith(CONTENT_HASH_PRIVATE):
+		return s[len(CONTENT_HASH_PRIVATE) :].strip(), "private"
+	if s.startswith(CONTENT_HASH_PUBLIC):
+		return s[len(CONTENT_HASH_PUBLIC) :].strip(), "public"
+	return s.strip(), "private"
 
 
 def file_upload_to_cloud(doc, method=None):
@@ -121,6 +122,8 @@ def delete_from_cloud(doc, method=None):
 	if not backend or not doc.content_hash:
 		return
 	key, bucket_type = _parse_content_hash(doc.content_hash)
+	if not key:
+		return
 	backend.delete(key, bucket_type)
 
 

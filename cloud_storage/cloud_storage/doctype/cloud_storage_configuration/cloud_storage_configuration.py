@@ -34,7 +34,7 @@ class CloudStorageConfiguration(Document):
 	def _validate_and_encrypt_s3_secret(self):
 		val = (self.s3_aws_secret or "").strip()
 		if _is_placeholder(val):
-			existing = frappe.db.get_value(self.doctype, self.name, "s3_aws_secret")
+			existing = frappe.db.get_single_value(self.doctype, "s3_aws_secret")
 			if existing:
 				self.s3_aws_secret = existing
 		elif val:
@@ -43,7 +43,7 @@ class CloudStorageConfiguration(Document):
 	def _validate_and_encrypt_gcs_json(self):
 		val = (self.gcs_credentials_json or "").strip()
 		if _is_placeholder(val):
-			existing = frappe.db.get_value(self.doctype, self.name, "gcs_credentials_json")
+			existing = frappe.db.get_single_value(self.doctype, "gcs_credentials_json")
 			if existing:
 				self.gcs_credentials_json = existing
 			else:

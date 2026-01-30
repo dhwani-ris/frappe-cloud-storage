@@ -1,0 +1,180 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-01-30 08:18:49.842541",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "general_configuration_section",
+  "enabled",
+  "delete_file_from_cloud",
+  "storage_provider",
+  "column_break_general",
+  "signed_url_expiry_time",
+  "folder_name",
+  "s3_section",
+  "s3_private_bucket_name",
+  "s3_public_bucket_name",
+  "column_break_s3",
+  "s3_region_name",
+  "s3_aws_secret",
+  "s3_aws_key",
+  "gcs_section",
+  "gcs_private_bucket_name",
+  "gcs_public_bucket_name",
+  "column_break_gcs",
+  "gcs_credentials_json"
+ ],
+ "fields": [
+  {
+   "fieldname": "general_configuration_section",
+   "fieldtype": "Section Break",
+   "label": "General Configuration"
+  },
+  {
+   "default": "0",
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Enabled"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval:doc.enabled",
+   "fieldname": "delete_file_from_cloud",
+   "fieldtype": "Check",
+   "label": "Delete file from cloud when File is deleted"
+  },
+  {
+   "depends_on": "eval:doc.enabled",
+   "fieldname": "storage_provider",
+   "fieldtype": "Select",
+   "label": "Storage Provider",
+   "mandatory_depends_on": "eval:doc.enabled",
+   "options": "Amazon S3\nGoogle Cloud Storage"
+  },
+  {
+   "fieldname": "column_break_general",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "300",
+   "depends_on": "eval:doc.enabled",
+   "description": "Seconds",
+   "fieldname": "signed_url_expiry_time",
+   "fieldtype": "Int",
+   "label": "Signed URL Expiry (seconds)"
+  },
+  {
+   "depends_on": "eval:doc.enabled",
+   "fieldname": "folder_name",
+   "fieldtype": "Data",
+   "label": "Folder Prefix"
+  },
+  {
+   "depends_on": "eval:doc.enabled && doc.storage_provider=='Amazon S3'",
+   "fieldname": "s3_section",
+   "fieldtype": "Section Break",
+   "label": "Amazon S3 (Private + Public buckets)"
+  },
+  {
+   "depends_on": "eval:doc.storage_provider=='Amazon S3'",
+   "description": "Private files only; no public ACL",
+   "fieldname": "s3_private_bucket_name",
+   "fieldtype": "Data",
+   "label": "Private Bucket Name",
+   "mandatory_depends_on": "eval:doc.enabled && doc.storage_provider=='Amazon S3'"
+  },
+  {
+   "depends_on": "eval:doc.storage_provider=='Amazon S3'",
+   "description": "Public files; objects get public-read ACL",
+   "fieldname": "s3_public_bucket_name",
+   "fieldtype": "Data",
+   "label": "Public Bucket Name",
+   "mandatory_depends_on": "eval:doc.enabled && doc.storage_provider=='Amazon S3'"
+  },
+  {
+   "depends_on": "eval:doc.storage_provider=='Amazon S3'",
+   "fieldname": "s3_region_name",
+   "fieldtype": "Data",
+   "label": "Region",
+   "mandatory_depends_on": "eval:doc.enabled && doc.storage_provider=='Amazon S3'"
+  },
+  {
+   "depends_on": "eval:doc.storage_provider=='Amazon S3'",
+   "fieldname": "s3_aws_key",
+   "fieldtype": "Data",
+   "label": "Access Key ID",
+   "mandatory_depends_on": "eval:doc.enabled && doc.storage_provider=='Amazon S3'"
+  },
+  {
+   "depends_on": "eval:doc.storage_provider=='Amazon S3'",
+   "fieldname": "s3_aws_secret",
+   "fieldtype": "Password",
+   "label": "Secret Access Key",
+   "mandatory_depends_on": "eval:doc.enabled && doc.storage_provider=='Amazon S3'"
+  },
+  {
+   "depends_on": "eval:doc.storage_provider=='Amazon S3'",
+   "fieldname": "column_break_s3",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval:doc.enabled && doc.storage_provider=='Google Cloud Storage'",
+   "fieldname": "gcs_section",
+   "fieldtype": "Section Break",
+   "label": "Google Cloud Storage (Private + Public buckets)"
+  },
+  {
+   "depends_on": "eval:doc.storage_provider=='Google Cloud Storage'",
+   "description": "Private files only; no make_public",
+   "fieldname": "gcs_private_bucket_name",
+   "fieldtype": "Data",
+   "label": "Private Bucket Name",
+   "mandatory_depends_on": "eval:doc.enabled && doc.storage_provider=='Google Cloud Storage'"
+  },
+  {
+   "depends_on": "eval:doc.storage_provider=='Google Cloud Storage'",
+   "description": "Public files; objects get make_public",
+   "fieldname": "gcs_public_bucket_name",
+   "fieldtype": "Data",
+   "label": "Public Bucket Name",
+   "mandatory_depends_on": "eval:doc.enabled && doc.storage_provider=='Google Cloud Storage'"
+  },
+  {
+   "depends_on": "eval:doc.storage_provider=='Google Cloud Storage'",
+   "fieldname": "gcs_credentials_json",
+   "fieldtype": "Small Text",
+   "label": "Service Account JSON",
+   "mandatory_depends_on": "eval:doc.enabled && doc.storage_provider=='Google Cloud Storage'"
+  },
+  {
+   "depends_on": "eval:doc.storage_provider=='Google Cloud Storage'",
+   "fieldname": "column_break_gcs",
+   "fieldtype": "Column Break"
+  }
+ ],
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-01-30 12:02:29.032421",
+ "modified_by": "Administrator",
+ "module": "Cloud Storage",
+ "name": "Cloud Storage Configuration",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

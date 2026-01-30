@@ -130,15 +130,13 @@ app_license = "mit"
 
 # Document Events
 # ---------------
-# Hook on document methods and events
 
-# doc_events = {
-# 	"*": {
-# 		"on_update": "method",
-# 		"on_cancel": "method",
-# 		"on_trash": "method"
-# 	}
-# }
+doc_events = {
+	"File": {
+		"after_insert": "cloud_storage.controller.file_upload_to_cloud",
+		"on_trash": "cloud_storage.controller.delete_from_cloud",
+	}
+}
 
 # Scheduled Tasks
 # ---------------
@@ -249,4 +247,3 @@ app_license = "mit"
 # ------------
 # List of apps whose translatable strings should be excluded from this app's translations.
 # ignore_translatable_strings_from = []
-

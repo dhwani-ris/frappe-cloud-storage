@@ -134,7 +134,7 @@ def generate_file(key=None, file_name=None):
 		return
 	backend = get_backend()
 	if not backend:
-		frappe.throw(frappe._("Cloud Storage is not enabled"))
+		frappe.throw(frappe._("MultiCloud Storage is not enabled"))
 	parsed_key, bucket_type = _parse_content_hash(key)
 	url = backend.get_url(parsed_key, file_name, bucket_type)
 	frappe.local.response["type"] = "redirect"
@@ -188,7 +188,7 @@ def _upload_existing_file(file_doc):
 def migrate_existing_files():
 	config = get_config()
 	if not config:
-		frappe.throw(frappe._("Cloud Storage is not enabled"))
+		frappe.throw(frappe._("MultiCloud Storage is not enabled"))
 	files = frappe.get_all(
 		"File",
 		filters={"is_folder": 0},
@@ -221,7 +221,7 @@ def migrate_existing_files():
 			skipped_other += 1
 			errors.append({"file": f["name"], "error": str(e)})
 			frappe.log_error(
-				title=f"Cloud Storage migrate: {f.get('name')}",
+				title=f"MultiCloud Storage migrate: {f.get('name')}",
 				message=frappe.get_traceback(),
 			)
 	return {
@@ -240,7 +240,7 @@ def migrate_existing_files():
 def test_connection():
 	config = get_config()
 	if not config:
-		return {"success": False, "message": frappe._("Cloud Storage is not enabled")}
+		return {"success": False, "message": frappe._("MultiCloud Storage is not enabled")}
 	backend = get_backend(config)
 	if not backend:
 		return {"success": False, "message": frappe._("Invalid provider configuration")}

@@ -1,4 +1,4 @@
-# Cloud Storage
+# MultiCloud Storage
 
 Multi-cloud file storage app for the Frappe framework. Uploads Frappe **File** attachments to **Amazon S3** or **Google Cloud Storage (GCS)** and serves them from the cloud.
 

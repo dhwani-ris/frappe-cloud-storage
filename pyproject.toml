@@ -3,7 +3,7 @@ name = "cloud_storage"
 authors = [
     { name = "Bhushan Barbuddhe", email = "frappeteam@dhwaniris.com"}
 ]
-description = "Cloud Storage is a multi-cloud file storage app for the Frappe framework that supports Amazon S3 and Google Cloud Storage (GCS)."
+description = "MultiCloud Storage is a multi-cloud file storage app for the Frappe framework that supports Amazon S3 and Google Cloud Storage (GCS)."
 requires-python = ">=3.14"
 readme = "README.md"
 dynamic = ["version"]

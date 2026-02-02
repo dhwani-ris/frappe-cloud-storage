@@ -1,7 +1,7 @@
-app_name = "cloud_storage"
-app_title = "Cloud Storage"
+app_name = "multi_cloud_storage"
+app_title = "MultiCloud Storage"
 app_publisher = "Bhushan Barbuddhe"
-app_description = "Cloud Storage is a multi-cloud file storage app for the Frappe framework that supports Amazon S3 and Google Cloud Storage (GCS)."
+app_description = "MultiCloud Storage is a multi-cloud file storage app for the Frappe framework that supports Amazon S3 and Google Cloud Storage (GCS)."
 app_email = "frappeteam@dhwaniris.com"
 app_license = "mit"
 
@@ -15,7 +15,7 @@ app_license = "mit"
 # 	{
 # 		"name": "cloud_storage",
 # 		"logo": "/assets/cloud_storage/logo.png",
-# 		"title": "Cloud Storage",
+# 		"title": "MultiCloud Storage",
 # 		"route": "/cloud_storage",
 # 		"has_permission": "cloud_storage.api.permission.has_app_permission"
 # 	}

@@ -94,7 +94,7 @@ class GCSBackend(CloudStorageBackend):
 			pass
 		except Exception as e:
 			frappe.log_error(
-				title="Cloud Storage GCS delete failed",
+				title="MultiCloud Storage GCS delete failed",
 				message=f"key={key!r} bucket_type={bucket_type} bucket={bucket_name}\n{frappe.get_traceback()}",
 			)
 			frappe.throw(frappe._("Could not delete file from cloud: {0}").format(str(e)))

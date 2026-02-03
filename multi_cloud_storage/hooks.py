@@ -1,7 +1,7 @@
-app_name = "cloud_storage"
-app_title = "Cloud Storage"
+app_name = "multi_cloud_storage"
+app_title = "MultiCloud Storage"
 app_publisher = "Bhushan Barbuddhe"
-app_description = "Cloud Storage is a multi-cloud file storage app for the Frappe framework that supports Amazon S3 and Google Cloud Storage (GCS)."
+app_description = "MultiCloud Storage is a multi-cloud file storage app for the Frappe framework that supports Amazon S3 and Google Cloud Storage (GCS)."
 app_email = "frappeteam@dhwaniris.com"
 app_license = "mit"
 
@@ -13,11 +13,11 @@ app_license = "mit"
 # Each item in the list will be shown as an app in the apps page
 # add_to_apps_screen = [
 # 	{
-# 		"name": "cloud_storage",
-# 		"logo": "/assets/cloud_storage/logo.png",
-# 		"title": "Cloud Storage",
-# 		"route": "/cloud_storage",
-# 		"has_permission": "cloud_storage.api.permission.has_app_permission"
+# 		"name": "multi_cloud_storage",
+# 		"logo": "/assets/multi_cloud_storage/logo.png",
+# 		"title": "MultiCloud Storage",
+# 		"route": "/multi_cloud_storage",
+# 		"has_permission": "multi_cloud_storage.api.permission.has_app_permission"
 # 	}
 # ]
 
@@ -25,15 +25,15 @@ app_license = "mit"
 # ------------------
 
 # include js, css files in header of desk.html
-# app_include_css = "/assets/cloud_storage/css/cloud_storage.css"
-# app_include_js = "/assets/cloud_storage/js/cloud_storage.js"
+# app_include_css = "/assets/multi_cloud_storage/css/multi_cloud_storage.css"
+# app_include_js = "/assets/multi_cloud_storage/js/multi_cloud_storage.js"
 
 # include js, css files in header of web template
-# web_include_css = "/assets/cloud_storage/css/cloud_storage.css"
-# web_include_js = "/assets/cloud_storage/js/cloud_storage.js"
+# web_include_css = "/assets/multi_cloud_storage/css/multi_cloud_storage.css"
+# web_include_js = "/assets/multi_cloud_storage/js/multi_cloud_storage.js"
 
 # include custom scss in every website theme (without file extension ".scss")
-# website_theme_scss = "cloud_storage/public/scss/website"
+# website_theme_scss = "multi_cloud_storage/public/scss/website"
 
 # include js, css files in header of web form
 # webform_include_js = {"doctype": "public/js/doctype.js"}
@@ -51,7 +51,7 @@ app_license = "mit"
 # Svg Icons
 # ------------------
 # include app icons in desk
-# app_include_icons = "cloud_storage/public/icons.svg"
+# app_include_icons = "multi_cloud_storage/public/icons.svg"
 
 # Home Pages
 # ----------
@@ -78,43 +78,43 @@ app_license = "mit"
 
 # add methods and filters to jinja environment
 # jinja = {
-# 	"methods": "cloud_storage.utils.jinja_methods",
-# 	"filters": "cloud_storage.utils.jinja_filters"
+# 	"methods": "multi_cloud_storage.utils.jinja_methods",
+# 	"filters": "multi_cloud_storage.utils.jinja_filters"
 # }
 
 # Installation
 # ------------
 
-# before_install = "cloud_storage.install.before_install"
-# after_install = "cloud_storage.install.after_install"
+# before_install = "multi_cloud_storage.install.before_install"
+# after_install = "multi_cloud_storage.install.after_install"
 
 # Uninstallation
 # ------------
 
-# before_uninstall = "cloud_storage.uninstall.before_uninstall"
-# after_uninstall = "cloud_storage.uninstall.after_uninstall"
+# before_uninstall = "multi_cloud_storage.uninstall.before_uninstall"
+# after_uninstall = "multi_cloud_storage.uninstall.after_uninstall"
 
 # Integration Setup
 # ------------------
 # To set up dependencies/integrations with other apps
 # Name of the app being installed is passed as an argument
 
-# before_app_install = "cloud_storage.utils.before_app_install"
-# after_app_install = "cloud_storage.utils.after_app_install"
+# before_app_install = "multi_cloud_storage.utils.before_app_install"
+# after_app_install = "multi_cloud_storage.utils.after_app_install"
 
 # Integration Cleanup
 # -------------------
 # To clean up dependencies/integrations with other apps
 # Name of the app being uninstalled is passed as an argument
 
-# before_app_uninstall = "cloud_storage.utils.before_app_uninstall"
-# after_app_uninstall = "cloud_storage.utils.after_app_uninstall"
+# before_app_uninstall = "multi_cloud_storage.utils.before_app_uninstall"
+# after_app_uninstall = "multi_cloud_storage.utils.after_app_uninstall"
 
 # Desk Notifications
 # ------------------
 # See frappe.core.notifications.get_notification_config
 
-# notification_config = "cloud_storage.notifications.get_notification_config"
+# notification_config = "multi_cloud_storage.notifications.get_notification_config"
 
 # Permissions
 # -----------
@@ -133,8 +133,8 @@ app_license = "mit"
 
 doc_events = {
 	"File": {
-		"after_insert": "cloud_storage.controller.file_upload_to_cloud",
-		"on_trash": "cloud_storage.controller.delete_from_cloud",
+		"after_insert": "multi_cloud_storage.controller.file_upload_to_cloud",
+		"on_trash": "multi_cloud_storage.controller.delete_from_cloud",
 	}
 }
 
@@ -143,47 +143,47 @@ doc_events = {
 
 # scheduler_events = {
 # 	"all": [
-# 		"cloud_storage.tasks.all"
+# 		"multi_cloud_storage.tasks.all"
 # 	],
 # 	"daily": [
-# 		"cloud_storage.tasks.daily"
+# 		"multi_cloud_storage.tasks.daily"
 # 	],
 # 	"hourly": [
-# 		"cloud_storage.tasks.hourly"
+# 		"multi_cloud_storage.tasks.hourly"
 # 	],
 # 	"weekly": [
-# 		"cloud_storage.tasks.weekly"
+# 		"multi_cloud_storage.tasks.weekly"
 # 	],
 # 	"monthly": [
-# 		"cloud_storage.tasks.monthly"
+# 		"multi_cloud_storage.tasks.monthly"
 # 	],
 # }
 
 # Testing
 # -------
 
-# before_tests = "cloud_storage.install.before_tests"
+# before_tests = "multi_cloud_storage.install.before_tests"
 
 # Extend DocType Class
 # ------------------------------
 #
 # Specify custom mixins to extend the standard doctype controller.
 # extend_doctype_class = {
-# 	"Task": "cloud_storage.custom.task.CustomTaskMixin"
+# 	"Task": "multi_cloud_storage.custom.task.CustomTaskMixin"
 # }
 
 # Overriding Methods
 # ------------------------------
 #
 # override_whitelisted_methods = {
-# 	"frappe.desk.doctype.event.event.get_events": "cloud_storage.event.get_events"
+# 	"frappe.desk.doctype.event.event.get_events": "multi_cloud_storage.event.get_events"
 # }
 #
 # each overriding function accepts a `data` argument;
 # generated from the base implementation of the doctype dashboard,
 # along with any modifications made in other Frappe apps
 # override_doctype_dashboards = {
-# 	"Task": "cloud_storage.task.get_dashboard_data"
+# 	"Task": "multi_cloud_storage.task.get_dashboard_data"
 # }
 
 # exempt linked doctypes from being automatically cancelled
@@ -197,13 +197,13 @@ doc_events = {
 
 # Request Events
 # ----------------
-# before_request = ["cloud_storage.utils.before_request"]
-# after_request = ["cloud_storage.utils.after_request"]
+# before_request = ["multi_cloud_storage.utils.before_request"]
+# after_request = ["multi_cloud_storage.utils.after_request"]
 
 # Job Events
 # ----------
-# before_job = ["cloud_storage.utils.before_job"]
-# after_job = ["cloud_storage.utils.after_job"]
+# before_job = ["multi_cloud_storage.utils.before_job"]
+# after_job = ["multi_cloud_storage.utils.after_job"]
 
 # User Data Protection
 # --------------------
@@ -233,7 +233,7 @@ doc_events = {
 # --------------------------------
 
 # auth_hooks = [
-# 	"cloud_storage.auth.validate"
+# 	"multi_cloud_storage.auth.validate"
 # ]
 
 # Automatically update python controller files with type annotations for this app.

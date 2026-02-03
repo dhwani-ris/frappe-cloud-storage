@@ -43,7 +43,7 @@ def _is_cloud_file_url(file_url):
 		return False
 	patterns = [
 		r"^https?://.*\.s3\.amazonaws\.com/",
-		r"^/api/method/cloud_storage\.controller\.generate_file",
+		r"^/api/method/multi_cloud_storage\.controller\.generate_file",
 		r"^https://storage\.googleapis\.com/",
 		r"^https://storage\.cloud\.google\.com/",
 	]
@@ -77,7 +77,7 @@ def file_upload_to_cloud(doc, method=None):
 	backend = get_backend()
 	if not backend:
 		return
-	ignore_doctypes = frappe.local.conf.get("ignore_cloud_storage_doctype") or ["Data Import"]
+	ignore_doctypes = frappe.local.conf.get("ignore_multi_cloud_storage_doctype") or ["Data Import"]
 	if doc.attached_to_doctype in ignore_doctypes:
 		return
 	site_path = frappe.utils.get_site_path()
@@ -101,7 +101,7 @@ def file_upload_to_cloud(doc, method=None):
 	prefix = CONTENT_HASH_PRIVATE if doc.is_private else CONTENT_HASH_PUBLIC
 	content_hash = prefix + key
 	if doc.is_private:
-		file_url = f"/api/method/cloud_storage.controller.generate_file?key={quote(content_hash)}&file_name={quote(doc.file_name or '')}"
+		file_url = f"/api/method/multi_cloud_storage.controller.generate_file?key={quote(content_hash)}&file_name={quote(doc.file_name or '')}"
 	else:
 		file_url = backend.get_public_url(key) if hasattr(backend, "get_public_url") else path
 	try:
@@ -168,7 +168,7 @@ def _upload_existing_file(file_doc):
 	prefix = CONTENT_HASH_PRIVATE if doc.is_private else CONTENT_HASH_PUBLIC
 	content_hash = prefix + key
 	if doc.is_private:
-		file_url = f"/api/method/cloud_storage.controller.generate_file?key={quote(content_hash)}&file_name={quote(doc.file_name or '')}"
+		file_url = f"/api/method/multi_cloud_storage.controller.generate_file?key={quote(content_hash)}&file_name={quote(doc.file_name or '')}"
 	else:
 		file_url = backend.get_public_url(key) if hasattr(backend, "get_public_url") else doc.file_url
 	try:

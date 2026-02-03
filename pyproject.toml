@@ -1,5 +1,5 @@
 [project]
-name = "cloud_storage"
+name = "multi_cloud_storage"
 authors = [
     { name = "Bhushan Barbuddhe", email = "frappeteam@dhwaniris.com"}
 ]

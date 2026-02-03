@@ -19,13 +19,13 @@ Multi-cloud file storage app for the Frappe framework. Uploads Frappe **File** a
 ```bash
 cd $PATH_TO_YOUR_BENCH
 bench get-app $URL_OF_THIS_REPO
-bench install-app cloud_storage
+bench install-app multi_cloud_storage
 ```
 
 Install Python dependencies (if not installed by bench):
 
 ```bash
-pip install -r apps/cloud_storage/requirements.txt
+pip install -r apps/multi_cloud_storage/requirements.txt
 ```
 
 Dependencies: `boto3`, `google-cloud-storage`, `python-magic`.
@@ -65,7 +65,7 @@ You can use the same bucket for both by setting the same name for Private and Pu
 ## How it works
 
 - **Upload**: On File `after_insert`, if cloud storage is enabled and the file is on disk, it is uploaded to the **private** or **public** bucket according to `is_private`. The File row is updated with the cloud `file_url` and `content_hash` (stored as `private:key` or `public:key` so delete/URL know which bucket). The local file is removed.
-- **Private files**: Stored in the private bucket; `file_url` is `/api/method/cloud_storage.controller.generate_file?key=...`, which redirects to a signed URL.
+- **Private files**: Stored in the private bucket; `file_url` is `/api/method/multi_cloud_storage.controller.generate_file?key=...`, which redirects to a signed URL.
 - **Public files**: Stored in the public bucket with public read; `file_url` is the bucket’s public URL.
 - **Delete**: On File `on_trash`, if “Delete file from cloud” is enabled, the object is deleted from the correct bucket (parsed from `content_hash`).
 - **Migrate**: Same logic; each file is uploaded to the private or public bucket by its `is_private` flag.
@@ -74,15 +74,15 @@ Object keys use a path like `{folder_prefix}/{YYYY}/{MM}/{DD}/{doctype}/{random}
 
 ## Customisation
 
-- **Ignore doctypes**: In `site_config.json` or environment, set `ignore_cloud_storage_doctype` to a list of doctypes whose attachments should not be uploaded (e.g. `["Data Import", "Prepared Report"]`). “Prepared Report” is always ignored.
-- **Custom key generator**: In your app’s `hooks.py`, set `cloud_storage_key_generator = ["your_app.utils.your_key_function"]`. The function receives `file_name`, `parent_doctype`, `parent_name` and should return the object key (string).
+- **Ignore doctypes**: In `site_config.json` or environment, set `ignore_multi_cloud_storage_doctype` to a list of doctypes whose attachments should not be uploaded (e.g. `["Data Import", "Prepared Report"]`). “Prepared Report” is always ignored.
+- **Custom key generator**: In your app’s `hooks.py`, set `multi_cloud_storage_key_generator = ["your_app.utils.your_key_function"]`. The function receives `file_name`, `parent_doctype`, `parent_name` and should return the object key (string).
 
 ## Contributing
 
 Pre-commit is used for formatting and linting:
 
 ```bash
-cd apps/cloud_storage
+cd apps/multi_cloud_storage
 pre-commit install
 ```
 

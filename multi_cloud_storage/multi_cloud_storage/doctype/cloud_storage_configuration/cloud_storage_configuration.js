@@ -13,7 +13,7 @@ frappe.ui.form.on("Cloud Storage Configuration", {
 				return;
 			}
 			frappe.call({
-				method: "cloud_storage.controller.test_connection",
+				method: "multi_cloud_storage.controller.test_connection",
 				freeze: true,
 				callback(r) {
 					if (r.message && r.message.success) {
@@ -37,7 +37,7 @@ frappe.ui.form.on("Cloud Storage Configuration", {
 				__("Upload all local files (/files/ and /private/files/) to cloud. Continue?"),
 				() => {
 					frappe.call({
-						method: "cloud_storage.controller.migrate_existing_files",
+						method: "multi_cloud_storage.controller.migrate_existing_files",
 						freeze: true,
 						callback(r) {
 							if (!r.message) return;

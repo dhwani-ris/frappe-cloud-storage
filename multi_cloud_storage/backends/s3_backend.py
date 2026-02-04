@@ -49,7 +49,7 @@ class S3Backend(CloudStorageBackend):
 		return re.sub(r"[^0-9a-zA-Z._-]", "", file_name)
 
 	def key_generator(self, file_name, parent_doctype, parent_name):
-		hook_cmd = frappe.get_hooks("cloud_storage_key_generator")
+		hook_cmd = frappe.get_hooks("multi_cloud_storage_key_generator")
 		if hook_cmd:
 			try:
 				k = frappe.get_attr(hook_cmd[0])(

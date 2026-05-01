@@ -141,7 +141,7 @@ def delete_from_cloud(doc, method=None):
 
 
 @frappe.whitelist()
-def generate_file(key=None, file_name=None):
+def generate_file(key: str | None = None, file_name: str | None = None):
 	if not key:
 		frappe.local.response["body"] = "Key not found."
 		return

@@ -4,6 +4,7 @@
 import datetime
 import random
 import string
+from pathlib import Path
 
 import frappe
 from azure.core.exceptions import ResourceNotFoundError
@@ -82,7 +83,7 @@ class AzureBackend(CloudStorageBackend):
 		blob_client = self.client.get_blob_client(container=container_name, blob=key)
 		try:
 			blob_client.upload_blob(
-				open(file_path, "rb"),
+				Path(file_path).read_bytes(),
 				content_settings=ContentSettings(content_type=content_type),
 				metadata={"file_name": file_name or ""},
 				overwrite=True,

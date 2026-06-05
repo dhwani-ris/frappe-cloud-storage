@@ -81,13 +81,12 @@ class AzureBackend(CloudStorageBackend):
 		container_name = self._container("private" if is_private else "public")
 		blob_client = self.client.get_blob_client(container=container_name, blob=key)
 		try:
-			with open(file_path, "rb") as data:
-				blob_client.upload_blob(
-					data,
-					content_settings=ContentSettings(content_type=content_type),
-					metadata={"file_name": file_name or ""},
-					overwrite=True,
-				)
+			blob_client.upload_blob(
+				open(file_path, "rb"),
+				content_settings=ContentSettings(content_type=content_type),
+				metadata={"file_name": file_name or ""},
+				overwrite=True,
+			)
 		except Exception as e:
 			frappe.throw(frappe._("File upload failed: {0}").format(str(e)))
 		return key

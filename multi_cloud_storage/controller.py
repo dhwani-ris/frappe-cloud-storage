@@ -7,6 +7,7 @@ from urllib.parse import quote
 
 import frappe
 
+from .backends.azure_backend import AzureBackend
 from .backends.gcs_backend import GCSBackend
 from .backends.s3_backend import S3Backend
 
@@ -26,6 +27,8 @@ def get_backend(config=None):
 		return S3Backend(config)
 	if config.storage_provider == "Google Cloud Storage":
 		return GCSBackend(config)
+	if config.storage_provider == "Azure Blob Storage":
+		return AzureBackend(config)
 	return None
 
 
@@ -46,6 +49,7 @@ def _is_cloud_file_url(file_url):
 		r"^/api/method/multi_cloud_storage\.controller\.generate_file",
 		r"^https://storage\.googleapis\.com/",
 		r"^https://storage\.cloud\.google\.com/",
+		r"^https?://[^.]+\.blob\.core\.windows\.net/",
 	]
 	return any(re.match(p, file_url) for p in patterns)
 

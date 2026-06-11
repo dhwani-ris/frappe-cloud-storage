@@ -30,6 +30,14 @@ class CloudStorageConfiguration(Document):
 			if not (self.gcs_public_bucket_name or "").strip():
 				frappe.throw(frappe._("GCS Public Bucket Name is required"))
 			self._validate_and_encrypt_gcs_json()
+		elif self.storage_provider == "Azure Blob Storage":
+			if not (self.azure_account_name or "").strip():
+				frappe.throw(frappe._("Azure Storage Account Name is required"))
+			if not (self.azure_private_container_name or "").strip():
+				frappe.throw(frappe._("Azure Private Container Name is required"))
+			if not (self.azure_public_container_name or "").strip():
+				frappe.throw(frappe._("Azure Public Container Name is required"))
+			self._validate_and_encrypt_azure_key()
 
 	def _validate_and_encrypt_s3_secret(self):
 		val = (self.s3_aws_secret or "").strip()
@@ -51,10 +59,21 @@ class CloudStorageConfiguration(Document):
 		elif val.startswith("{"):
 			self.gcs_credentials_json = frappe.utils.password.encrypt(val)
 
+	def _validate_and_encrypt_azure_key(self):
+		val = (self.azure_account_key or "").strip()
+		if _is_placeholder(val):
+			existing = frappe.db.get_single_value(self.doctype, "azure_account_key")
+			if existing:
+				self.azure_account_key = existing
+		elif val:
+			self.azure_account_key = frappe.utils.password.encrypt(val)
+
 	def as_dict(self, *args, **kwargs):
 		d = super().as_dict(*args, **kwargs)
 		if d.get("s3_aws_secret"):
 			d["s3_aws_secret"] = SECRET_PLACEHOLDER
 		if d.get("gcs_credentials_json"):
 			d["gcs_credentials_json"] = SECRET_PLACEHOLDER
+		if d.get("azure_account_key"):
+			d["azure_account_key"] = SECRET_PLACEHOLDER
 		return d

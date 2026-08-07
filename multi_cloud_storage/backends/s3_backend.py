@@ -96,7 +96,9 @@ class S3Backend(CloudStorageBackend):
 		expiry = self.config.signed_url_expiry_time or 300
 		params = {"Bucket": bucket, "Key": key}
 		if file_name:
-			params["ResponseContentDisposition"] = f"filename={file_name}"
+			# "attachment;" forces the browser to download the file instead of rendering it inline
+			# (a bare "filename=" is treated as inline, so CSVs/PDFs opened in a tab instead).
+			params["ResponseContentDisposition"] = f'attachment; filename="{file_name}"'
 		return self.client.generate_presigned_url("get_object", Params=params, ExpiresIn=expiry)
 
 	def get_public_url(self, key):

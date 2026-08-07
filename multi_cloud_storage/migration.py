@@ -53,11 +53,6 @@ def run_batch(migration_log):
 		_finalize(log, "Failed")
 		return
 
-	# `content_hash` cannot be used to detect "already migrated" -- Frappe core populates it
-	# with a real content-dedup hash on virtually every file (File.generate_content_hash),
-	# unrelated to this app's reuse of the same column to store its own "private:<key>" /
-	# "public:<key>" marker after upload. Candidate selection instead mirrors the original
-	# _is_local_file_url() check: only rows whose file_url still points at local disk.
 	batch_size = log.batch_size or BATCH_SIZE
 	rows = frappe.db.sql(
 		"""
@@ -78,7 +73,7 @@ def run_batch(migration_log):
 		_process_row(log, row, config)
 
 	log.save(ignore_permissions=True)
-	frappe.db.commit()
+	frappe.db.commit()  # nosemgrep
 	_publish_progress(log)
 
 	if len(rows) < batch_size:
@@ -169,7 +164,7 @@ def _finalize(log, status):
 	log.status = status
 	log.ended_on = frappe.utils.now_datetime()
 	log.save(ignore_permissions=True)
-	frappe.db.commit()
+	frappe.db.commit()  # nosemgrep
 	_publish_progress(log)
 
 

@@ -12,6 +12,7 @@
   "column_break_general",
   "signed_url_expiry_time",
   "folder_name",
+  "excluded_file_extensions",
   "s3_section",
   "s3_private_bucket_name",
   "s3_public_bucket_name",
@@ -76,6 +77,14 @@
    "fieldname": "folder_name",
    "fieldtype": "Data",
    "label": "Folder Prefix"
+  },
+  {
+   "default": ".cer, .pem, .key",
+   "depends_on": "eval:doc.enabled",
+   "description": "Comma-separated file extensions that are never uploaded to cloud storage and stay on local disk instead, e.g. .cer, .pem, .key",
+   "fieldname": "excluded_file_extensions",
+   "fieldtype": "Small Text",
+   "label": "Excluded File Extensions"
   },
   {
    "depends_on": "eval:doc.enabled && doc.storage_provider=='Amazon S3'",
@@ -203,7 +212,7 @@
  ],
  "issingle": 1,
  "links": [],
- "modified": "2026-06-04 00:00:00.000000",
+ "modified": "2026-08-07 15:31:58.291992",
  "modified_by": "Administrator",
  "module": "Multi Cloud Storage",
  "name": "Cloud Storage Configuration",

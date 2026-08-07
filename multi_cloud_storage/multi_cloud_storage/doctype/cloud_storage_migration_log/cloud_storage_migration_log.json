@@ -1,0 +1,181 @@
+{
+ "actions": [],
+ "autoname": "format:MIGRATION-{#####}",
+ "creation": "2026-08-07 00:00:00",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "status_section",
+  "status",
+  "current_batch_number",
+  "batch_size",
+  "column_break_status",
+  "started_by",
+  "started_on",
+  "ended_on",
+  "counts_section",
+  "migrated",
+  "skipped_no_url_or_cloud",
+  "skipped_excluded_extension",
+  "column_break_counts",
+  "skipped_not_local_url",
+  "skipped_file_not_found",
+  "skipped_other",
+  "details_section",
+  "cursor",
+  "errors"
+ ],
+ "fields": [
+  {
+   "fieldname": "status_section",
+   "fieldtype": "Section Break",
+   "label": "Status"
+  },
+  {
+   "default": "Queued",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Queued\nIn Progress\nCompleted\nCompleted with Errors\nFailed\nCancelling\nCancelled",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "current_batch_number",
+   "fieldtype": "Int",
+   "label": "Batch #",
+   "read_only": 1
+  },
+  {
+   "default": "200",
+   "fieldname": "batch_size",
+   "fieldtype": "Int",
+   "label": "Batch Size",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_status",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "started_by",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Started By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "started_on",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Started On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "ended_on",
+   "fieldtype": "Datetime",
+   "label": "Ended On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "counts_section",
+   "fieldtype": "Section Break",
+   "label": "Counts"
+  },
+  {
+   "default": "0",
+   "fieldname": "migrated",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Migrated",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "skipped_no_url_or_cloud",
+   "fieldtype": "Int",
+   "label": "Skipped: No URL / Already on Cloud",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "skipped_excluded_extension",
+   "fieldtype": "Int",
+   "label": "Skipped: Excluded Extension",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_counts",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "skipped_not_local_url",
+   "fieldtype": "Int",
+   "label": "Skipped: Not a Local URL",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "skipped_file_not_found",
+   "fieldtype": "Int",
+   "label": "Skipped: File Not Found",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "skipped_other",
+   "fieldtype": "Int",
+   "label": "Skipped: Error",
+   "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "details_section",
+   "fieldtype": "Section Break",
+   "label": "Details"
+  },
+  {
+   "description": "Last processed File name (internal pagination cursor)",
+   "fieldname": "cursor",
+   "fieldtype": "Data",
+   "label": "Cursor",
+   "read_only": 1
+  },
+  {
+   "description": "Most recent errors (capped). Full tracebacks are in the Error Log.",
+   "fieldname": "errors",
+   "fieldtype": "Long Text",
+   "label": "Errors",
+   "read_only": 1
+  }
+ ],
+ "in_create": 1,
+ "links": [],
+ "modified": "2026-08-07 15:31:25.316544",
+ "modified_by": "Administrator",
+ "module": "Multi Cloud Storage",
+ "name": "Cloud Storage Migration Log",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "read_only": 1,
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

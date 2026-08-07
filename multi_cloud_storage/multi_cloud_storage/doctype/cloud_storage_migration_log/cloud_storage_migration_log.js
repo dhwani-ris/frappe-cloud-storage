@@ -10,7 +10,9 @@ frappe.ui.form.on("Cloud Storage Migration Log", {
 		if (["Queued", "In Progress"].includes(frm.doc.status)) {
 			frm.add_custom_button(__("Cancel Migration"), () => {
 				frappe.confirm(
-					__("The migration will stop after the batch currently in progress finishes. Continue?"),
+					__(
+						"The migration will stop after the batch currently in progress finishes. Continue?"
+					),
 					() => {
 						frappe.call({
 							method: "multi_cloud_storage.migration.cancel_migration",

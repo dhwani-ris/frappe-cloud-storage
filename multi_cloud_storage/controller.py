@@ -211,9 +211,7 @@ def migrate_existing_files():
 	)
 	if active:
 		frappe.throw(
-			frappe._(
-				"A migration is already {0}. Open it to view progress: {1}"
-			).format(
+			frappe._("A migration is already {0}. Open it to view progress: {1}").format(
 				frappe.db.get_value("Cloud Storage Migration Log", active, "status"),
 				frappe.utils.get_link_to_form("Cloud Storage Migration Log", active),
 			)

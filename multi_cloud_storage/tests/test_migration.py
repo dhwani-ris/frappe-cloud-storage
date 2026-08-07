@@ -67,7 +67,9 @@ class TestMigration(IntegrationTestCase):
 		with patch.object(controller, "get_backend", lambda cfg=None: FakeBackend()):
 			for name in self._file_docs:
 				try:
-					frappe.delete_doc("File", name, force=True, ignore_permissions=True, delete_permanently=True)
+					frappe.delete_doc(
+						"File", name, force=True, ignore_permissions=True, delete_permanently=True
+					)
 				except Exception:
 					pass
 			for name in self._migration_logs:

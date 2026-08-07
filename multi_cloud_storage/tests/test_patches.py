@@ -17,9 +17,7 @@ class TestSetDefaultExcludedFileExtensions(IntegrationTestCase):
 		self._original = frappe.db.get_single_value("Cloud Storage Configuration", "excluded_file_extensions")
 
 	def tearDown(self):
-		frappe.db.set_single_value(
-			"Cloud Storage Configuration", "excluded_file_extensions", self._original
-		)
+		frappe.db.set_single_value("Cloud Storage Configuration", "excluded_file_extensions", self._original)
 		self._commit_patch.stop()
 		super().tearDown()
 

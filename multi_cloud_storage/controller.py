@@ -5,7 +5,7 @@ import importlib
 import os
 import re
 from pathlib import Path
-from urllib.parse import quote
+from urllib.parse import quote, unquote
 
 import frappe
 
@@ -96,6 +96,19 @@ CONTENT_HASH_PRIVATE = "private:"
 CONTENT_HASH_PUBLIC = "public:"
 
 
+def _decode_query_param(value):
+	"""Fully decode query string values (handles private%253A / private%3A → private:)."""
+	if not value or not isinstance(value, str):
+		return value
+	s = value.strip()
+	for _ in range(12):
+		n = unquote(s)
+		if n == s:
+			break
+		s = n
+	return s
+
+
 def _parse_content_hash(content_hash):
 	if not content_hash or not isinstance(content_hash, str):
 		return None, "private"
@@ -169,10 +182,13 @@ def delete_from_cloud(doc, method=None):
 
 
 @frappe.whitelist()
-def generate_file(key=None, file_name=None):
+def generate_file(key: str | None = None, file_name: str | None = None):
 	if not key:
 		frappe.local.response["body"] = "Key not found."
 		return
+	key = _decode_query_param(key)
+	if file_name:
+		file_name = _decode_query_param(file_name)
 	backend = get_backend()
 	if not backend:
 		frappe.throw(frappe._("MultiCloud Storage is not enabled"))
@@ -210,7 +226,10 @@ def migrate_existing_files():
 def test_connection():
 	config = get_config()
 	if not config:
-		return {"success": False, "message": frappe._("MultiCloud Storage is not enabled")}
+		return {
+			"success": False,
+			"message": frappe._("MultiCloud Storage is not enabled"),
+		}
 	backend = get_backend(config)
 	if not backend:
 		return {"success": False, "message": frappe._("Invalid provider configuration")}

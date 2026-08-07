@@ -34,61 +34,32 @@ frappe.ui.form.on("Cloud Storage Configuration", {
 
 		frm.add_custom_button(__("Migrate Existing Files"), () => {
 			frappe.confirm(
-				__("Upload all local files (/files/ and /private/files/) to cloud. Continue?"),
+				__(
+					"Upload all local files (/files/ and /private/files/) to cloud in the background. Continue?"
+				),
 				() => {
 					frappe.call({
 						method: "multi_cloud_storage.controller.migrate_existing_files",
 						freeze: true,
 						callback(r) {
-							if (!r.message) return;
-							const m = r.message;
-							const migrated = m.migrated ?? 0;
-							const skipped = m.skipped ?? 0;
-							const total = m.total ?? 0;
+							if (!r.message || !r.message.migration_log) return;
 							frappe.show_alert({
-								message:
-									__("Migrated") +
-									` ${migrated} ` +
-									__("file(s). Skipped:") +
-									` ${skipped}. ` +
-									__("Total:") +
-									` ${total}.`,
-								indicator: "blue",
+								message: __("Migration started in the background."),
+								indicator: "green",
 							});
-							const details = [];
-							if (m.skipped_not_local_url)
-								details.push(__("Not local URL:") + " " + m.skipped_not_local_url);
-							if (m.skipped_no_url_or_cloud)
-								details.push(
-									__("No URL or on cloud:") + " " + m.skipped_no_url_or_cloud
-								);
-							if (m.skipped_file_not_found)
-								details.push(
-									__("File not on disk:") + " " + m.skipped_file_not_found
-								);
-							if (m.skipped_other)
-								details.push(__("Other / error:") + " " + m.skipped_other);
-							if (details.length) {
-								frappe.msgprint({
-									title: __("Migration details"),
-									message: details.join("<br>"),
-									indicator: "blue",
-								});
-							}
-							if (m.errors && m.errors.length) {
-								frappe.msgprint({
-									title: __("Some files failed"),
-									message: m.errors
-										.map((e) => `${e.file}: ${e.error}`)
-										.join("<br>"),
-									indicator: "orange",
-								});
-							}
-							frm.reload_doc();
+							frappe.set_route(
+								"Form",
+								"Cloud Storage Migration Log",
+								r.message.migration_log
+							);
 						},
 					});
 				}
 			);
+		});
+
+		frm.add_custom_button(__("View Migration Logs"), () => {
+			frappe.set_route("List", "Cloud Storage Migration Log");
 		});
 	},
 });

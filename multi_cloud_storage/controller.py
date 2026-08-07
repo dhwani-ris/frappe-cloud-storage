@@ -1,15 +1,19 @@
 # Copyright (c) 2026, Bhushan Barbuddhe and contributors
 # For license information, please see license.txt
 
+import importlib
 import os
 import re
+from pathlib import Path
 from urllib.parse import quote, unquote
 
 import frappe
 
-from .backends.azure_backend import AzureBackend
-from .backends.gcs_backend import GCSBackend
-from .backends.s3_backend import S3Backend
+BACKEND_IMPORTS = {
+	"Amazon S3": (".backends.s3_backend", "S3Backend", "boto3"),
+	"Google Cloud Storage": (".backends.gcs_backend", "GCSBackend", "google-cloud-storage"),
+	"Azure Blob Storage": (".backends.azure_backend", "AzureBackend", "azure-storage-blob azure-identity"),
+}
 
 
 def get_config():
@@ -23,13 +27,21 @@ def get_backend(config=None):
 	config = config or get_config()
 	if not config:
 		return None
-	if config.storage_provider == "Amazon S3":
-		return S3Backend(config)
-	if config.storage_provider == "Google Cloud Storage":
-		return GCSBackend(config)
-	if config.storage_provider == "Azure Blob Storage":
-		return AzureBackend(config)
-	return None
+	backend_info = BACKEND_IMPORTS.get(config.storage_provider)
+	if not backend_info:
+		return None
+	module_path, class_name, pip_packages = backend_info
+	try:
+		module = importlib.import_module(module_path, package=__package__)
+		backend_class = getattr(module, class_name)
+	except ImportError as e:
+		frappe.throw(
+			frappe._(
+				"The {0} backend could not be loaded because a required package is missing. "
+				"Install it with: bench pip install {1} ({2})"
+			).format(config.storage_provider, pip_packages, str(e))
+		)
+	return backend_class(config)
 
 
 def _get_content_type(file_path):
@@ -58,6 +70,26 @@ def _is_local_file_url(file_url):
 	if not file_url or not isinstance(file_url, str):
 		return False
 	return file_url.startswith("/files/") or file_url.startswith("/private/files/")
+
+
+def _parse_excluded_extensions(config):
+	raw = (config.get("excluded_file_extensions") or "") if config else ""
+	extensions = set()
+	for part in raw.replace("\n", ",").split(","):
+		ext = part.strip().lower()
+		if not ext:
+			continue
+		if not ext.startswith("."):
+			ext = "." + ext
+		extensions.add(ext)
+	return extensions
+
+
+def _is_excluded_extension(file_name, config):
+	extensions = _parse_excluded_extensions(config)
+	if not extensions or not file_name:
+		return False
+	return Path(file_name).suffix.lower() in extensions
 
 
 CONTENT_HASH_PRIVATE = "private:"
@@ -91,7 +123,12 @@ def _parse_content_hash(content_hash):
 def file_upload_to_cloud(doc, method=None):
 	if doc.attached_to_doctype == "Prepared Report":
 		return
-	backend = get_backend()
+	config = get_config()
+	if not config:
+		return
+	if _is_excluded_extension(doc.file_name, config):
+		return
+	backend = get_backend(config)
 	if not backend:
 		return
 	ignore_doctypes = frappe.local.conf.get("ignore_multi_cloud_storage_doctype") or ["Data Import"]
@@ -161,106 +198,26 @@ def generate_file(key: str | None = None, file_name: str | None = None):
 	frappe.local.response["location"] = url
 
 
-def _upload_existing_file(file_doc):
-	backend = get_backend()
-	if not backend:
-		return False
-	doc = file_doc
-	path = (doc.file_url or "").strip()
-	if not _is_local_file_url(path):
-		return False
-	if path.startswith("/private/files/"):
-		relative = path[len("/private/files/") :].lstrip("/")
-		file_path = frappe.utils.get_files_path(*relative.split("/"), is_private=True)
-	else:
-		relative = path[len("/files/") :].lstrip("/")
-		file_path = frappe.utils.get_files_path(*relative.split("/"))
-	if not os.path.isfile(file_path):
-		return "file_not_found"
-	parent_doctype = doc.attached_to_doctype or "File"
-	parent_name = doc.attached_to_name or ""
-	if hasattr(backend, "key_generator"):
-		key = backend.key_generator(doc.file_name, parent_doctype, parent_name)
-	else:
-		key = f"{parent_doctype}/{doc.file_name}"
-	content_type = _get_content_type(file_path)
-	backend.upload(file_path, key, content_type, doc.is_private, doc.file_name)
-	prefix = CONTENT_HASH_PRIVATE if doc.is_private else CONTENT_HASH_PUBLIC
-	content_hash = prefix + key
-	if doc.is_private:
-		file_url = f"/api/method/multi_cloud_storage.controller.generate_file?key={quote(content_hash)}&file_name={quote(doc.file_name or '')}"
-	else:
-		file_url = backend.get_public_url(key) if hasattr(backend, "get_public_url") else doc.file_url
-	try:
-		os.remove(file_path)
-	except OSError:
-		pass
-	frappe.db.sql(
-		"""UPDATE `tabFile` SET file_url=%s, folder=%s, old_parent=%s, content_hash=%s
-		WHERE name=%s""",
-		(file_url, "Home/Attachments", "Home/Attachments", content_hash, doc.name),
-	)
-	frappe.db.commit()
-	return True
-
-
 @frappe.whitelist()
 def migrate_existing_files():
 	config = get_config()
 	if not config:
 		frappe.throw(frappe._("MultiCloud Storage is not enabled"))
-	files = frappe.get_all(
-		"File",
-		filters={"is_folder": 0},
-		fields=[
-			"name",
-			"file_url",
-			"file_name",
-			"is_private",
-			"attached_to_doctype",
-			"attached_to_name",
-		],
+	from . import migration
+
+	active = frappe.db.exists(
+		"Cloud Storage Migration Log",
+		{"status": ["in", migration.ACTIVE_STATUSES]},
 	)
-	migrated = 0
-	skipped_no_url_or_cloud = 0
-	skipped_not_local = 0
-	skipped_file_not_found = 0
-	skipped_other = 0
-	errors = []
-	for f in files:
-		file_url = f.get("file_url")
-		if not file_url or _is_cloud_file_url(file_url):
-			skipped_no_url_or_cloud += 1
-			continue
-		if not _is_local_file_url(file_url):
-			skipped_not_local += 1
-			continue
-		try:
-			doc = frappe.get_doc("File", f["name"])
-			result = _upload_existing_file(doc)
-			if result is True:
-				migrated += 1
-			elif result == "file_not_found":
-				skipped_file_not_found += 1
-			else:
-				skipped_other += 1
-		except Exception as e:
-			skipped_other += 1
-			errors.append({"file": f["name"], "error": str(e)})
-			frappe.log_error(
-				title=f"MultiCloud Storage migrate: {f.get('name')}",
-				message=frappe.get_traceback(),
+	if active:
+		frappe.throw(
+			frappe._("A migration is already {0}. Open it to view progress: {1}").format(
+				frappe.db.get_value("Cloud Storage Migration Log", active, "status"),
+				frappe.utils.get_link_to_form("Cloud Storage Migration Log", active),
 			)
-	return {
-		"migrated": migrated,
-		"total": len(files),
-		"skipped": skipped_no_url_or_cloud + skipped_not_local + skipped_file_not_found + skipped_other,
-		"skipped_no_url_or_cloud": skipped_no_url_or_cloud,
-		"skipped_not_local_url": skipped_not_local,
-		"skipped_file_not_found": skipped_file_not_found,
-		"skipped_other": skipped_other,
-		"errors": errors[:10],
-	}
+		)
+	log_name = migration.start_migration()
+	return {"migration_log": log_name}
 
 
 @frappe.whitelist()

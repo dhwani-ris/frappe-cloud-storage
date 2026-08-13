@@ -12,6 +12,7 @@
   "column_break_general",
   "signed_url_expiry_time",
   "folder_name",
+  "excluded_file_extensions",
   "s3_section",
   "s3_private_bucket_name",
   "s3_public_bucket_name",
@@ -23,7 +24,13 @@
   "gcs_private_bucket_name",
   "gcs_public_bucket_name",
   "column_break_gcs",
-  "gcs_credentials_json"
+  "gcs_credentials_json",
+  "azure_section",
+  "azure_account_name",
+  "azure_private_container_name",
+  "azure_public_container_name",
+  "column_break_azure",
+  "azure_account_key"
  ],
  "fields": [
   {
@@ -51,7 +58,7 @@
    "fieldtype": "Select",
    "label": "Storage Provider",
    "mandatory_depends_on": "eval:doc.enabled",
-   "options": "Amazon S3\nGoogle Cloud Storage"
+   "options": "Amazon S3\nGoogle Cloud Storage\nAzure Blob Storage"
   },
   {
    "fieldname": "column_break_general",
@@ -70,6 +77,14 @@
    "fieldname": "folder_name",
    "fieldtype": "Data",
    "label": "Folder Prefix"
+  },
+  {
+   "default": ".cer, .pem, .key",
+   "depends_on": "eval:doc.enabled",
+   "description": "Comma-separated file extensions that are never uploaded to cloud storage and stay on local disk instead, e.g. .cer, .pem, .key",
+   "fieldname": "excluded_file_extensions",
+   "fieldtype": "Small Text",
+   "label": "Excluded File Extensions"
   },
   {
    "depends_on": "eval:doc.enabled && doc.storage_provider=='Amazon S3'",
@@ -152,11 +167,52 @@
    "depends_on": "eval:doc.storage_provider=='Google Cloud Storage'",
    "fieldname": "column_break_gcs",
    "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval:doc.enabled && doc.storage_provider=='Azure Blob Storage'",
+   "fieldname": "azure_section",
+   "fieldtype": "Section Break",
+   "label": "Azure Blob Storage (Private + Public containers)"
+  },
+  {
+   "depends_on": "eval:doc.storage_provider=='Azure Blob Storage'",
+   "fieldname": "azure_account_name",
+   "fieldtype": "Data",
+   "label": "Storage Account Name",
+   "mandatory_depends_on": "eval:doc.enabled && doc.storage_provider=='Azure Blob Storage'"
+  },
+  {
+   "depends_on": "eval:doc.storage_provider=='Azure Blob Storage'",
+   "description": "Private files only; container must have no public access",
+   "fieldname": "azure_private_container_name",
+   "fieldtype": "Data",
+   "label": "Private Container Name",
+   "mandatory_depends_on": "eval:doc.enabled && doc.storage_provider=='Azure Blob Storage'"
+  },
+  {
+   "depends_on": "eval:doc.storage_provider=='Azure Blob Storage'",
+   "description": "Public files; container must have Blob-level public access enabled",
+   "fieldname": "azure_public_container_name",
+   "fieldtype": "Data",
+   "label": "Public Container Name",
+   "mandatory_depends_on": "eval:doc.enabled && doc.storage_provider=='Azure Blob Storage'"
+  },
+  {
+   "depends_on": "eval:doc.storage_provider=='Azure Blob Storage'",
+   "fieldname": "column_break_azure",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval:doc.storage_provider=='Azure Blob Storage'",
+   "description": "Leave blank to use Managed Identity (azure-identity must be installed)",
+   "fieldname": "azure_account_key",
+   "fieldtype": "Data",
+   "label": "Storage Account Key"
   }
  ],
  "issingle": 1,
  "links": [],
- "modified": "2026-01-30 12:54:46.332188",
+ "modified": "2026-08-07 15:31:58.291992",
  "modified_by": "Administrator",
  "module": "Multi Cloud Storage",
  "name": "Cloud Storage Configuration",

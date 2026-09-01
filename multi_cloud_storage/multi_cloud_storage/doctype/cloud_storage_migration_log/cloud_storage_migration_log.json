@@ -1,15 +1,17 @@
 {
  "actions": [],
- "autoname": "format:MIGRATION-{#####}",
+ "autoname": "MIGRATION-.#####",
  "creation": "2026-08-07 00:00:00",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
   "status_section",
+  "migration_type",
   "status",
   "current_batch_number",
   "batch_size",
   "column_break_status",
+  "bucket_type",
   "started_by",
   "started_on",
   "ended_on",
@@ -17,12 +19,16 @@
   "migrated",
   "skipped_no_url_or_cloud",
   "skipped_excluded_extension",
+  "objects_indexed",
   "column_break_counts",
   "skipped_not_local_url",
   "skipped_file_not_found",
   "skipped_other",
+  "flagged_for_review",
+  "flagged_unresolved",
   "details_section",
   "cursor",
+  "continuation_token",
   "errors"
  ],
  "fields": [
@@ -30,6 +36,16 @@
    "fieldname": "status_section",
    "fieldtype": "Section Break",
    "label": "Status"
+  },
+  {
+   "default": "Upload Local Files",
+   "fieldname": "migration_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Migration Type",
+   "options": "Upload Local Files\nScan Bucket Index\nLink Existing Objects (Files)\nLink Existing Objects (Attach Fields)",
+   "read_only": 1
   },
   {
    "default": "Queued",
@@ -58,6 +74,15 @@
   {
    "fieldname": "column_break_status",
    "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval:['Scan Bucket Index'].includes(doc.migration_type)",
+   "description": "Which bucket this run scans. Link Existing Objects modes read bucket_type per-row from the resolver / File instead.",
+   "fieldname": "bucket_type",
+   "fieldtype": "Select",
+   "label": "Bucket Type",
+   "options": "\nprivate\npublic",
+   "read_only": 1
   },
   {
    "fieldname": "started_by",
@@ -108,6 +133,14 @@
    "read_only": 1
   },
   {
+   "default": "0",
+   "depends_on": "eval:doc.migration_type=='Scan Bucket Index'",
+   "fieldname": "objects_indexed",
+   "fieldtype": "Int",
+   "label": "Objects Indexed",
+   "read_only": 1
+  },
+  {
    "fieldname": "column_break_counts",
    "fieldtype": "Column Break"
   },
@@ -133,16 +166,42 @@
    "read_only": 1
   },
   {
+   "default": "0",
+   "depends_on": "eval:['Link Existing Objects (Files)', 'Link Existing Objects (Attach Fields)'].includes(doc.migration_type)",
+   "description": "Routed to Cloud Storage Reconciliation Issue instead of being auto-linked: either multiple objects shared the resolved basename (Ambiguous), or the target field is flagged require_manual_review (Manual Review Required).",
+   "fieldname": "flagged_for_review",
+   "fieldtype": "Int",
+   "label": "Flagged: For Review",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "depends_on": "eval:['Link Existing Objects (Files)', 'Link Existing Objects (Attach Fields)'].includes(doc.migration_type)",
+   "description": "No candidate object found for this reference -- routed to Cloud Storage Reconciliation Issue.",
+   "fieldname": "flagged_unresolved",
+   "fieldtype": "Int",
+   "label": "Flagged: Unresolved",
+   "read_only": 1
+  },
+  {
    "collapsible": 1,
    "fieldname": "details_section",
    "fieldtype": "Section Break",
    "label": "Details"
   },
   {
-   "description": "Last processed File name (internal pagination cursor)",
+   "description": "Internal pagination cursor. For Upload/Link Files modes: last processed File name. For Link Existing Objects (Attach Fields): \"{target index}|{last processed record name}\".",
    "fieldname": "cursor",
    "fieldtype": "Data",
    "label": "Cursor",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.migration_type=='Scan Bucket Index'",
+   "description": "Opaque pagination token from the storage provider's list-objects API. Used to resume an interrupted scan without starting over.",
+   "fieldname": "continuation_token",
+   "fieldtype": "Small Text",
+   "label": "Continuation Token",
    "read_only": 1
   },
   {
@@ -155,11 +214,11 @@
  ],
  "in_create": 1,
  "links": [],
- "modified": "2026-08-07 15:31:25.316544",
+ "modified": "2026-09-01 21:50:28.914699",
  "modified_by": "Administrator",
  "module": "Multi Cloud Storage",
  "name": "Cloud Storage Migration Log",
- "naming_rule": "Expression (old style)",
+ "naming_rule": "Expression",
  "owner": "Administrator",
  "permissions": [
   {

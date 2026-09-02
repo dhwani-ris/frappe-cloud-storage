@@ -214,7 +214,7 @@ def _bulk_insert_index(objects, bucket_type, scan_log_name):
 				user,
 			]
 		)
-	frappe.db.sql(
+	frappe.db.sql(  # nosemgrep: frappe-sql-format-injection -- value_groups holds only literal "(%s, ...)" placeholder groups, one per row; actual values are bound via params below
 		f"""
 		INSERT INTO `tabCloud Storage Object Index`
 			(name, bucket_type, object_key, basename, size, last_modified, scan_log,
@@ -360,7 +360,7 @@ def _parse_attach_cursor(cursor):
 def _fetch_attach_target_rows(target, record_cursor, limit):
 	doctype = target["target_doctype"]
 	fieldname = target["target_fieldname"]
-	return frappe.db.sql(
+	return frappe.db.sql(  # nosemgrep: frappe-sql-format-injection -- doctype/fieldname are validated identifiers (Cloud Storage Attach Field Target.validate() confirms the field exists and is Attach/Attach Image), not user input; identifiers can't be bound as %s params
 		f"""
 		SELECT name, `{fieldname}` AS raw_value
 		FROM `tab{doctype}`
@@ -368,7 +368,7 @@ def _fetch_attach_target_rows(target, record_cursor, limit):
 		  AND name > %s
 		ORDER BY name ASC
 		LIMIT %s
-		""",  # nosemgrep
+		""",
 		(record_cursor or "", limit),
 		as_dict=True,
 	)

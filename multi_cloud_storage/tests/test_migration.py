@@ -687,18 +687,24 @@ class TestLinkExistingAttachFields(IntegrationTestCase):
 		user.reload()
 		self.assertIn("multi_cloud_storage.controller.generate_file", user.user_image)
 
+		# Filtered by content_hash (set only by our own _create_file_for_attach_value)
+		# rather than just attached_to_doctype/name/field: some Frappe core versions'
+		# attach_files_to_document on_update hook auto-attaches a bookkeeping File for
+		# ANY non-empty Attach field value regardless of shape, which would otherwise
+		# alias into this same (doctype, name, field) triple and make this assertion
+		# depend on which core version is installed rather than on our own code.
 		created_files = frappe.get_all(
 			"File",
 			filters={
 				"attached_to_doctype": "User",
 				"attached_to_name": user.name,
 				"attached_to_field": "user_image",
+				"content_hash": "private:beam/avatars/avatar-1.png",
 			},
 			fields=["name", "file_url", "content_hash"],
 		)
 		self.assertEqual(len(created_files), 1)
 		self._file_docs.append(created_files[0].name)
-		self.assertEqual(created_files[0].content_hash, "private:beam/avatars/avatar-1.png")
 		self.assertEqual(created_files[0].file_url, user.user_image)
 
 	def test_require_manual_review_never_auto_links_even_on_unique_match(self):

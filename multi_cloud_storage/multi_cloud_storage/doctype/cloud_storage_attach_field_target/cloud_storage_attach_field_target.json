@@ -1,5 +1,6 @@
 {
  "actions": [],
+ "allow_import": 1,
  "autoname": "format:{target_doctype}-{target_fieldname}",
  "creation": "2026-09-01 00:00:00",
  "doctype": "DocType",
@@ -67,11 +68,11 @@
   }
  ],
  "links": [],
- "modified": "2026-09-01 21:49:52.823800",
+ "modified": "2026-09-02 19:43:23.545772",
  "modified_by": "Administrator",
  "module": "Multi Cloud Storage",
  "name": "Cloud Storage Attach Field Target",
- "naming_rule": "Expression",
+ "naming_rule": "Expression (old style)",
  "owner": "Administrator",
  "permissions": [
   {

@@ -3,11 +3,11 @@ name: CI
 on:
   push:
     branches:
-      - cloud-storage
+      - develop
   pull_request:
 
 concurrency:
-  group: multi-cloud-storage-${{ github.event.number }}
+  group: develop-multi_cloud_storage-${{ github.event.number }}
   cancel-in-progress: true
 
 jobs:

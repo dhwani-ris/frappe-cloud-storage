@@ -1,0 +1,162 @@
+{
+ "actions": [],
+ "autoname": "format:ISSUE-{#####}",
+ "creation": "2026-09-01 00:00:00",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "status_section",
+  "status",
+  "reason",
+  "action_required",
+  "column_break_status",
+  "migration_log",
+  "creation_source_section",
+  "source_doctype",
+  "source_name",
+  "source_field",
+  "column_break_source",
+  "raw_reference",
+  "candidate_keys",
+  "resolution_section",
+  "resolved_key",
+  "resolution_notes"
+ ],
+ "fields": [
+  {
+   "fieldname": "status_section",
+   "fieldtype": "Section Break",
+   "label": "Status"
+  },
+  {
+   "default": "Open",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Open\nResolved"
+  },
+  {
+   "description": "Ambiguous: multiple objects shared the resolved basename. Unresolved: no candidate object found. Manual Review Required: exactly one clean candidate was found, but the target field is flagged require_manual_review (e.g. bank passbook, ID proof) so it was never auto-linked.",
+   "fieldname": "reason",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Reason",
+   "options": "Ambiguous\nUnresolved\nManual Review Required",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "bold": 1,
+   "description": "Set automatically when this issue is created -- what a reviewer needs to do to close it out.",
+   "fieldname": "action_required",
+   "fieldtype": "Small Text",
+   "label": "Action Required",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_status",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "migration_log",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Migration Log",
+   "options": "Cloud Storage Migration Log",
+   "read_only": 1
+  },
+  {
+   "fieldname": "creation_source_section",
+   "fieldtype": "Section Break",
+   "label": "Source Record"
+  },
+  {
+   "fieldname": "source_doctype",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Source DocType",
+   "options": "DocType",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "source_name",
+   "fieldtype": "Dynamic Link",
+   "in_list_view": 1,
+   "label": "Source Record",
+   "options": "source_doctype",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "description": "Blank when the source record is a File; the Attach / Attach Image fieldname when it is not.",
+   "fieldname": "source_field",
+   "fieldtype": "Data",
+   "label": "Source Field",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_source",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "raw_reference",
+   "fieldtype": "Small Text",
+   "label": "Raw Legacy Reference",
+   "read_only": 1
+  },
+  {
+   "description": "JSON list of candidate object keys found for this reference (Ambiguous only).",
+   "fieldname": "candidate_keys",
+   "fieldtype": "Small Text",
+   "label": "Candidate Keys",
+   "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "resolution_section",
+   "fieldtype": "Section Break",
+   "label": "Resolution"
+  },
+  {
+   "description": "The correct object key, picked by a human reviewer. Required before Status can be set to Resolved. Filling this in does not, by itself, update the source record -- rerun the linking job to pick it up.",
+   "fieldname": "resolved_key",
+   "fieldtype": "Small Text",
+   "label": "Resolved Key"
+  },
+  {
+   "fieldname": "resolution_notes",
+   "fieldtype": "Small Text",
+   "label": "Resolution Notes"
+  }
+ ],
+ "in_create": 1,
+ "links": [],
+ "modified": "2026-09-01 21:49:07.025467",
+ "modified_by": "Administrator",
+ "module": "Multi Cloud Storage",
+ "name": "Cloud Storage Reconciliation Issue",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "export": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "read_only": 1,
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

@@ -1,0 +1,45 @@
+name: Backport merged pull request
+
+# Mirrors Frappe's Mergify-based backport flow (see .mergify.yml in the
+# frappe/frappe repo) using a self-hosted Action instead of a paid GitHub App.
+#
+# Usage: on a PR merged into `develop`, add a label named "backport version-15"
+# and/or "backport version-16". This workflow cherry-picks the merge commit
+# onto that branch and opens a PR for review. Merging that PR pushes to the
+# version-* branch, which triggers release.yml and cuts an automatic release.
+
+on:
+  pull_request_target:
+    types: [closed, labeled]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  backport:
+    name: Backport
+    runs-on: ubuntu-latest
+    if: >
+      github.event.pull_request.merged == true
+      && (
+        github.event.action == 'closed'
+        || startsWith(github.event.label.name, 'backport ')
+      )
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Create backport PRs
+        uses: korthout/backport-action@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          # Matches labels like "backport version-15" -> target branch "version-15"
+          label_pattern: '^backport (version-\d+)$'
+          pull_title: '[Backport ${target_branch}] ${pull_title}'
+          pull_description: |
+            Automated backport of #${pull_number} to `${target_branch}`.
+
+            Merging this PR will automatically publish a release on `${target_branch}`.
+          merge_commits: skip

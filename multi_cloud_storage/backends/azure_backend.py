@@ -113,12 +113,16 @@ class AzureBackend(CloudStorageBackend):
 			)
 			frappe.throw(frappe._("Could not delete file from cloud: {0}").format(str(e)))
 
-	def get_url(self, key, file_name=None, bucket_type="private"):
+	def get_url(self, key, file_name=None, bucket_type="private", as_attachment=False):
 		account_name = self.config.get("azure_account_name")
 		container_name = self._container(bucket_type)
 		expiry = self.config.signed_url_expiry_time or 300
-		_ = self.client  # ensure client is initialised and _account_key is populated
+		_ = self.client
 		expiry_time = datetime.datetime.utcnow() + datetime.timedelta(seconds=expiry)
+		content_disposition = None
+		if file_name:
+			disposition = "attachment" if as_attachment else "inline"
+			content_disposition = f'{disposition}; filename="{file_name}"'
 		if self._account_key:
 			sas_token = generate_blob_sas(
 				account_name=account_name,
@@ -127,6 +131,7 @@ class AzureBackend(CloudStorageBackend):
 				account_key=self._account_key,
 				permission=BlobSasPermissions(read=True),
 				expiry=expiry_time,
+				content_disposition=content_disposition,
 			)
 		else:
 			user_delegation_key = self.client.get_user_delegation_key(
@@ -140,6 +145,7 @@ class AzureBackend(CloudStorageBackend):
 				user_delegation_key=user_delegation_key,
 				permission=BlobSasPermissions(read=True),
 				expiry=expiry_time,
+				content_disposition=content_disposition,
 			)
 		return f"https://{account_name}.blob.core.windows.net/{container_name}/{key}?{sas_token}"
 
@@ -147,6 +153,25 @@ class AzureBackend(CloudStorageBackend):
 		account_name = self.config.get("azure_account_name")
 		container_name = self._container("public")
 		return f"https://{account_name}.blob.core.windows.net/{container_name}/{key}"
+
+	def object_exists(self, key, bucket_type="private"):
+		container_name = self._container(bucket_type)
+		blob_client = self.client.get_blob_client(container=container_name, blob=key)
+		return blob_client.exists()
+
+	def list_keys_page(self, bucket_type="private", prefix=None, continuation_token=None, page_size=1000):
+		container_client = self.client.get_container_client(self._container(bucket_type))
+		pages = container_client.list_blobs(name_starts_with=prefix, results_per_page=page_size).by_page(
+			continuation_token=continuation_token
+		)
+		page = next(pages)
+		objects = [(blob.name, blob.size, blob.last_modified) for blob in page]
+		next_token = pages.continuation_token
+		return {
+			"objects": objects,
+			"continuation_token": next_token,
+			"is_truncated": bool(next_token),
+		}
 
 	def test_connection(self):
 		try:

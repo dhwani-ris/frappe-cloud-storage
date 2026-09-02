@@ -91,20 +91,46 @@ class S3Backend(CloudStorageBackend):
 		except ClientError:
 			frappe.throw(frappe._("Could not delete file from cloud"))
 
-	def get_url(self, key, file_name=None, bucket_type="private"):
+	def get_url(self, key, file_name=None, bucket_type="private", as_attachment=False):
 		bucket = self._bucket(bucket_type)
 		expiry = self.config.signed_url_expiry_time or 300
 		params = {"Bucket": bucket, "Key": key}
 		if file_name:
-			# "attachment;" forces the browser to download the file instead of rendering it inline
-			# (a bare "filename=" is treated as inline, so CSVs/PDFs opened in a tab instead).
-			params["ResponseContentDisposition"] = f'attachment; filename="{file_name}"'
+			disposition = "attachment" if as_attachment else "inline"
+			params["ResponseContentDisposition"] = f'{disposition}; filename="{file_name}"'
 		return self.client.generate_presigned_url("get_object", Params=params, ExpiresIn=expiry)
 
 	def get_public_url(self, key):
 		bucket = self._bucket("public")
 		endpoint = self.client.meta.endpoint_url
 		return f"{endpoint}/{bucket}/{key}"
+
+	def object_exists(self, key, bucket_type="private"):
+		bucket = self._bucket(bucket_type)
+		try:
+			self.client.head_object(Bucket=bucket, Key=key)
+			return True
+		except ClientError as e:
+			if e.response.get("Error", {}).get("Code") in ("404", "NoSuchKey", "NotFound"):
+				return False
+			raise
+
+	def list_keys_page(self, bucket_type="private", prefix=None, continuation_token=None, page_size=1000):
+		bucket = self._bucket(bucket_type)
+		kwargs = {"Bucket": bucket, "MaxKeys": page_size}
+		if prefix:
+			kwargs["Prefix"] = prefix
+		if continuation_token:
+			kwargs["ContinuationToken"] = continuation_token
+		response = self.client.list_objects_v2(**kwargs)
+		objects = [
+			(obj["Key"], obj.get("Size"), obj.get("LastModified")) for obj in response.get("Contents", [])
+		]
+		return {
+			"objects": objects,
+			"continuation_token": response.get("NextContinuationToken"),
+			"is_truncated": bool(response.get("IsTruncated")),
+		}
 
 	def test_connection(self):
 		try:

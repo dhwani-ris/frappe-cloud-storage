@@ -1,5 +1,7 @@
 {
 	"branches": [
+		"main",
+		"master",
 		{ "name": "version-15", "range": "15.x.x" },
 		{ "name": "version-16", "range": "16.x.x" }
 	],

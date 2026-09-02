@@ -1,7 +1,7 @@
 name: Generate Semantic Release
 on:
   push:
-    branches: [ 'version-*' ]
+    branches: [ 'version-*', 'main', 'master' ]
 
 permissions:
   contents: write

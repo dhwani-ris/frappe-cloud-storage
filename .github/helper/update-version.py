@@ -17,7 +17,7 @@ def update_version_in_init_files(new_version):
             init_file = os.path.join(item, '__init__.py')
             if os.path.exists(init_file):
                 try:
-                    with open(init_file, 'r') as f:
+                    with open(init_file, 'r') as f:  # nosemgrep: frappe-security-file-traversal -- init_file comes from os.listdir('.') on a CI checkout, not user input
                         content = f.read()
                     
                     # Update version using regex
@@ -27,7 +27,7 @@ def update_version_in_init_files(new_version):
                     if re.search(pattern, content):
                         updated_content = re.sub(pattern, replacement, content)
                         
-                        with open(init_file, 'w') as f:
+                        with open(init_file, 'w') as f:  # nosemgrep: frappe-security-file-traversal -- same fixed CI-checkout path as the read above
                             f.write(updated_content)
                         
                         updated_files.append(init_file)

@@ -143,6 +143,28 @@ class TestMigration(IntegrationTestCase):
 		self._file_paths.append(frappe.utils.get_files_path(relative, is_private=bool(is_private)))
 		return doc
 
+	def _skip_if_site_has_existing_local_files(self):
+		"""_run_upload_batch's query (SELECT ... FROM tabFile WHERE is_folder=0 AND
+		file_url LIKE '/files/%' OR '/private/files/%' ... LIMIT batch_size) is
+		deliberately unscoped -- in production it must sweep every File on the site.
+		Batch-count/pagination assertions in this class only hold on a site with no
+		other matching File rows (e.g. CI's fresh test_site); skip rather than assert
+		against counts this site's pre-existing data would silently change.
+		"""
+		existing = frappe.db.count(
+			"File",
+			{"is_folder": 0, "file_url": ["like", "/files/%"]},
+		) + frappe.db.count(
+			"File",
+			{"is_folder": 0, "file_url": ["like", "/private/files/%"]},
+		)
+		if existing:
+			self.skipTest(
+				f"Site already has {existing} File row(s) matching the unscoped Upload "
+				"Local Files query; this test's batch/count assertions only hold against "
+				"a site with none (e.g. CI's fresh test_site)."
+			)
+
 	def _run_sync(self, cancel_before_batch=None, migration_type="Upload Local Files", bucket_type=None):
 		"""Drives the enqueue -> run_batch -> re-enqueue chain synchronously in-process."""
 		state = {"n": 0}
@@ -199,6 +221,7 @@ class TestMigration(IntegrationTestCase):
 		return doc
 
 	def test_processes_all_files_across_multiple_batches(self):
+		self._skip_if_site_has_existing_local_files()
 		with patch.object(controller, "get_config", lambda: None):
 			for _ in range(5):
 				self._make_file()
@@ -218,6 +241,7 @@ class TestMigration(IntegrationTestCase):
 		self.assertEqual(len(fake_backend.uploaded), 5)
 
 	def test_file_missing_from_disk_is_skipped_and_run_terminates(self):
+		self._skip_if_site_has_existing_local_files()
 		with patch.object(controller, "get_config", lambda: None):
 			missing_doc = self._make_file()
 			missing_path = frappe.utils.get_files_path(missing_doc.file_url.split("/files/")[-1])
@@ -270,6 +294,7 @@ class TestMigration(IntegrationTestCase):
 				controller.migrate_existing_files()
 
 	def test_cancel_stops_before_next_batch(self):
+		self._skip_if_site_has_existing_local_files()
 		with patch.object(controller, "get_config", lambda: None):
 			for _ in range(4):
 				self._make_file()

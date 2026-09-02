@@ -37,12 +37,15 @@ class GCSBackend(CloudStorageBackend):
 			self._client = storage.Client(credentials=credentials)
 		return self._client
 
-	def _bucket(self, bucket_type):
+	def _bucket_name(self, bucket_type):
 		field = "gcs_public_bucket_name" if bucket_type == "public" else "gcs_private_bucket_name"
 		name = frappe.db.get_single_value("Cloud Storage Configuration", field)
 		if not name:
 			frappe.throw(frappe._("GCS {0} bucket name is not set").format(bucket_type))
-		return self.client.bucket(name)
+		return name
+
+	def _bucket(self, bucket_type):
+		return self.client.bucket(self._bucket_name(bucket_type))
 
 	def _strip_special_chars(self, file_name):
 		return "".join(c for c in file_name if c.isalnum() or c in "._- ").replace(" ", "_")
@@ -99,15 +102,38 @@ class GCSBackend(CloudStorageBackend):
 			)
 			frappe.throw(frappe._("Could not delete file from cloud: {0}").format(str(e)))
 
-	def get_url(self, key, file_name=None, bucket_type="private"):
+	def get_url(self, key, file_name=None, bucket_type="private", as_attachment=False):
 		bucket = self._bucket(bucket_type)
 		blob = bucket.blob(key)
 		expiry = datetime.timedelta(seconds=self.config.signed_url_expiry_time or 300)
-		return blob.generate_signed_url(version="v4", expiration=expiry, method="GET")
+		kwargs = {"version": "v4", "expiration": expiry, "method": "GET"}
+		if file_name:
+			disposition = "attachment" if as_attachment else "inline"
+			kwargs["response_disposition"] = f'{disposition}; filename="{file_name}"'
+		return blob.generate_signed_url(**kwargs)
 
 	def get_public_url(self, key):
 		blob = self._bucket("public").blob(key)
 		return blob.public_url
+
+	def object_exists(self, key, bucket_type="private"):
+		return self._bucket(bucket_type).blob(key).exists()
+
+	def list_keys_page(self, bucket_type="private", prefix=None, continuation_token=None, page_size=1000):
+		iterator = self.client.list_blobs(
+			self._bucket_name(bucket_type),
+			prefix=prefix,
+			page_token=continuation_token,
+			max_results=page_size,
+		)
+		page = next(iterator.pages)
+		objects = [(blob.name, blob.size, blob.updated) for blob in page]
+		next_token = iterator.next_page_token
+		return {
+			"objects": objects,
+			"continuation_token": next_token,
+			"is_truncated": bool(next_token),
+		}
 
 	def test_connection(self):
 		try:

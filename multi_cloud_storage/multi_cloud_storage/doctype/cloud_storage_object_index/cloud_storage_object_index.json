@@ -1,0 +1,94 @@
+{
+ "actions": [],
+ "autoname": "hash",
+ "creation": "2026-09-01 00:00:00",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "bucket_type",
+  "object_key",
+  "basename",
+  "column_break_basename",
+  "size",
+  "last_modified",
+  "scan_log"
+ ],
+ "fields": [
+  {
+   "fieldname": "bucket_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Bucket Type",
+   "options": "private\npublic",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "object_key",
+   "fieldtype": "Small Text",
+   "in_list_view": 1,
+   "label": "Object Key",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "description": "os.path.basename(object_key) -- the fast lookup path for resolving a legacy reference by filename.",
+   "fieldname": "basename",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Basename",
+   "length": 255,
+   "read_only": 1,
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "column_break_basename",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "size",
+   "fieldtype": "Int",
+   "label": "Size (bytes)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_modified",
+   "fieldtype": "Datetime",
+   "label": "Last Modified",
+   "read_only": 1
+  },
+  {
+   "fieldname": "scan_log",
+   "fieldtype": "Link",
+   "label": "Scan Log",
+   "options": "Cloud Storage Migration Log",
+   "read_only": 1
+  }
+ ],
+ "in_create": 1,
+ "links": [],
+ "modified": "2026-09-01 21:48:10.256994",
+ "modified_by": "Administrator",
+ "module": "Multi Cloud Storage",
+ "name": "Cloud Storage Object Index",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "export": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "read_only": 1,
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

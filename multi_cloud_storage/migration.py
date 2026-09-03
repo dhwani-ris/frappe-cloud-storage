@@ -53,7 +53,7 @@ def start_migration(migration_type="Upload Local Files", bucket_type=None):
 
 
 @frappe.whitelist()
-def cancel_migration(migration_log):
+def cancel_migration(migration_log: str):
 	log = frappe.get_doc("Cloud Storage Migration Log", migration_log)
 	if log.status in ("Queued", "In Progress"):
 		log.status = "Cancelling"
@@ -62,7 +62,7 @@ def cancel_migration(migration_log):
 
 
 @frappe.whitelist()
-def resume_migration(migration_log):
+def resume_migration(migration_log: str):
 	"""Manually resume a run that hasn't self-healed through the normal lifecycle --
 	e.g. a run stuck "In Progress" because its background job crashed outright before
 	this app's automatic crash-recovery (handle_batch_job_failure) was deployed, or a

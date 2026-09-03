@@ -27,6 +27,27 @@ frappe.ui.form.on("Cloud Storage Migration Log", {
 			}).addClass("btn-danger");
 		}
 
+		if (frm.doc.status === "Failed") {
+			frm.add_custom_button(__("Resume Migration"), () => {
+				frappe.confirm(
+					__(
+						"This resumes from the last saved cursor (batch {0}) instead of starting over. Continue?",
+						[frm.doc.current_batch_number || 0]
+					),
+					() => {
+						frappe.call({
+							method: "multi_cloud_storage.migration.resume_migration",
+							args: { migration_log: frm.doc.name },
+							freeze: true,
+							callback() {
+								frm.reload_doc();
+							},
+						});
+					}
+				);
+			}).addClass("btn-primary");
+		}
+
 		if (RUNNING_STATUSES.includes(frm.doc.status)) {
 			frm.dashboard.set_headline_alert(
 				__("Migration is running (batch {0}) — this page updates live.", [

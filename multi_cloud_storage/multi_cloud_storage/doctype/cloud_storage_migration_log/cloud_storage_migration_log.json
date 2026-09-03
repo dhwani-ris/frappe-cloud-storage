@@ -15,6 +15,7 @@
   "started_by",
   "started_on",
   "ended_on",
+  "retry_count",
   "counts_section",
   "migrated",
   "skipped_no_url_or_cloud",
@@ -66,6 +67,7 @@
   },
   {
    "default": "200",
+   "description": "Rows processed per background job invocation, fixed for the life of this run. 200 for Upload Local Files (each row is a real upload to the bucket); 5000 for Link Existing Objects, both modes (index-only lookups, no per-row network call); 1000 for Scan Bucket Index (one list-objects page).",
    "fieldname": "batch_size",
    "fieldtype": "Int",
    "label": "Batch Size",
@@ -103,6 +105,14 @@
    "fieldname": "ended_on",
    "fieldtype": "Datetime",
    "label": "Ended On",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "description": "Number of times this run's background job crashed outright (e.g. lost its DB connection mid-batch) and was automatically re-queued from its last saved cursor. Once this reaches the retry limit, the run is marked Failed instead of retrying again.",
+   "fieldname": "retry_count",
+   "fieldtype": "Int",
+   "label": "Auto-Retry Count",
    "read_only": 1
   },
   {
@@ -214,7 +224,7 @@
  ],
  "in_create": 1,
  "links": [],
- "modified": "2026-09-01 21:50:28.914699",
+ "modified": "2026-09-03 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Multi Cloud Storage",
  "name": "Cloud Storage Migration Log",

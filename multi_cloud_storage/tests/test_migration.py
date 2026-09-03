@@ -2,6 +2,7 @@
 # For license information, please see license.txt
 
 import os
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import frappe
@@ -773,3 +774,275 @@ class TestLinkExistingAttachFields(IntegrationTestCase):
 
 		user.reload()
 		self.assertEqual(user.user_image, "https://legacy.example.com/old/avatar-2.png")
+
+
+class TestBatchJobFailureRecovery(IntegrationTestCase):
+	"""
+	Covers the crash-recovery path registered as on_failure on every batch's background
+	job (see _enqueue_batch / handle_batch_job_failure / recover_or_fail_migration).
+
+	Motivating bug: a batch's background job died with "Lost connection to server during
+	query" / "Server has gone away" while saving at the end of run_batch(). run_batch()
+	never reached _finalize(), and Frappe's own execute_job() wrapper then failed too --
+	it tried frappe.db.rollback() on that same dead connection and raised again -- so
+	nothing ever moved the Migration Log off "In Progress" and nothing ever retried it.
+	RQ invokes on_failure for any crashed job unconditionally (regardless of what killed
+	it), which is what recover_or_fail_migration hangs off of.
+	"""
+
+	def setUp(self):
+		super().setUp()
+		self._commit_patch = patch.object(frappe.db, "commit", lambda *a, **kw: None)
+		self._commit_patch.start()
+		self._migration_logs = []
+
+	def tearDown(self):
+		for name in self._migration_logs:
+			try:
+				frappe.delete_doc("Cloud Storage Migration Log", name, force=True, ignore_permissions=True)
+			except Exception:
+				pass
+		self._commit_patch.stop()
+		super().tearDown()
+
+	def _make_log(self, status="In Progress", retry_count=0, cursor="some-cursor"):
+		log = frappe.get_doc(
+			{
+				"doctype": "Cloud Storage Migration Log",
+				"status": status,
+				"retry_count": retry_count,
+				"cursor": cursor,
+			}
+		).insert(ignore_permissions=True)
+		self._migration_logs.append(log.name)
+		return log
+
+	def test_crash_below_retry_limit_requeues_from_last_cursor(self):
+		log = self._make_log(retry_count=1)
+
+		enqueued = []
+		with patch.object(migration, "_enqueue_batch", enqueued.append):
+			migration.recover_or_fail_migration(log.name, "OperationalError: Server has gone away")
+
+		log.reload()
+		self.assertEqual(log.status, "Queued")
+		self.assertEqual(log.retry_count, 2)
+		self.assertEqual(log.cursor, "some-cursor")
+		self.assertEqual(enqueued, [log.name])
+		errors = frappe.parse_json(log.errors)
+		self.assertIn("Server has gone away", errors[-1]["error"])
+
+	def test_crash_at_retry_limit_marks_failed_and_stops_retrying(self):
+		log = self._make_log(retry_count=migration.MAX_AUTO_RETRIES)
+
+		enqueued = []
+		with patch.object(migration, "_enqueue_batch", enqueued.append):
+			migration.recover_or_fail_migration(log.name, "OperationalError: Server has gone away")
+
+		log.reload()
+		self.assertEqual(log.status, "Failed")
+		self.assertIsNotNone(log.ended_on)
+		self.assertEqual(log.retry_count, migration.MAX_AUTO_RETRIES)
+		self.assertEqual(enqueued, [])
+
+	def test_already_terminal_log_is_left_alone(self):
+		log = self._make_log(status="Completed")
+
+		enqueued = []
+		with patch.object(migration, "_enqueue_batch", enqueued.append):
+			migration.recover_or_fail_migration(log.name, "should not matter")
+
+		log.reload()
+		self.assertEqual(log.status, "Completed")
+		self.assertFalse(log.errors)
+		self.assertEqual(enqueued, [])
+
+	def test_unknown_migration_log_is_a_noop(self):
+		migration.recover_or_fail_migration("MIGRATION-does-not-exist", "boom")
+
+	def test_handle_batch_job_failure_extracts_kwargs_and_delegates(self):
+		"""Thin plumbing wrapper: verifies the job.kwargs shape frappe.enqueue() actually
+		produces (site + nested method kwargs) is unpacked correctly, without touching
+		frappe.init/connect/destroy -- those would tear down this test's own connection.
+		"""
+		log = self._make_log()
+		job = SimpleNamespace(kwargs={"site": frappe.local.site, "kwargs": {"migration_log": log.name}})
+
+		calls = []
+		with (
+			patch.object(migration, "recover_or_fail_migration", lambda name, msg: calls.append((name, msg))),
+			patch.object(frappe, "init", lambda *a, **kw: None),
+			patch.object(frappe, "connect", lambda *a, **kw: None),
+			patch.object(frappe, "destroy", lambda: None),
+		):
+			migration.handle_batch_job_failure(job, None, RuntimeError, RuntimeError("lost connection"), None)
+
+		self.assertEqual(calls, [(log.name, "RuntimeError: lost connection")])
+
+	def test_handle_batch_job_failure_ignores_malformed_job_kwargs(self):
+		with patch.object(migration, "recover_or_fail_migration") as mock_recover:
+			migration.handle_batch_job_failure(
+				SimpleNamespace(kwargs={}), None, RuntimeError, RuntimeError(), None
+			)
+
+		mock_recover.assert_not_called()
+
+	def test_enqueue_batch_registers_failure_callback(self):
+		captured = {}
+		with patch.object(frappe, "enqueue", lambda *a, **kw: captured.update(kw)):
+			migration._enqueue_batch("MIGRATION-0001")
+
+		self.assertEqual(captured.get("on_failure"), "multi_cloud_storage.migration.handle_batch_job_failure")
+
+
+class TestBatchSizeDefaults(IntegrationTestCase):
+	"""
+	Covers the per-migration-type batch size split: Upload Local Files does a real
+	per-row upload to the bucket and stays small (BATCH_SIZE); Link Existing Objects
+	(both modes) only resolves against the already-scanned Cloud Storage Object Index
+	and does a plain UPDATE -- no per-row network call -- so it can run a much larger
+	batch (LINK_BATCH_SIZE) without approaching the background job's timeout. Scan
+	Bucket Index is unaffected (SCAN_BATCH_SIZE, one list-objects page per batch).
+	"""
+
+	def setUp(self):
+		super().setUp()
+		self._commit_patch = patch.object(frappe.db, "commit", lambda *a, **kw: None)
+		self._commit_patch.start()
+		self._migration_logs = []
+
+	def tearDown(self):
+		for name in self._migration_logs:
+			try:
+				frappe.delete_doc("Cloud Storage Migration Log", name, force=True, ignore_permissions=True)
+			except Exception:
+				pass
+		self._commit_patch.stop()
+		super().tearDown()
+
+	def _start(self, migration_type, **kwargs):
+		with patch.object(migration, "_enqueue_batch", lambda *a, **kw: None):
+			log_name = migration.start_migration(migration_type=migration_type, **kwargs)
+		self._migration_logs.append(log_name)
+		return frappe.get_doc("Cloud Storage Migration Log", log_name)
+
+	def test_upload_local_files_keeps_the_small_batch_size(self):
+		log = self._start("Upload Local Files")
+		self.assertEqual(log.batch_size, migration.BATCH_SIZE)
+
+	def test_scan_bucket_index_keeps_its_own_batch_size(self):
+		log = self._start("Scan Bucket Index", bucket_type="private")
+		self.assertEqual(log.batch_size, migration.SCAN_BATCH_SIZE)
+
+	def test_link_existing_files_gets_the_larger_batch_size(self):
+		log = self._start("Link Existing Objects (Files)")
+		self.assertEqual(log.batch_size, migration.LINK_BATCH_SIZE)
+
+	def test_link_existing_attach_fields_gets_the_larger_batch_size(self):
+		log = self._start("Link Existing Objects (Attach Fields)")
+		self.assertEqual(log.batch_size, migration.LINK_BATCH_SIZE)
+
+	def test_defaults_are_looked_up_live_not_frozen_at_import(self):
+		"""Regression guard: start_migration() must read BATCH_SIZE/SCAN_BATCH_SIZE/
+		LINK_BATCH_SIZE as bare names at call time, not bake them into a dict built once
+		at import time -- otherwise patch.object(migration, "SCAN_BATCH_SIZE", ...), used
+		throughout this test module (e.g. TestScanBucketIndex), silently stops working.
+		"""
+		with (
+			patch.object(migration, "BATCH_SIZE", 7),
+			patch.object(migration, "SCAN_BATCH_SIZE", 8),
+			patch.object(migration, "LINK_BATCH_SIZE", 9),
+		):
+			self.assertEqual(self._start("Upload Local Files").batch_size, 7)
+			self.assertEqual(self._start("Scan Bucket Index", bucket_type="private").batch_size, 8)
+			self.assertEqual(self._start("Link Existing Objects (Files)").batch_size, 9)
+
+
+class TestResumeMigration(IntegrationTestCase):
+	"""
+	Covers resume_migration(): the supported way to recover a run that hasn't self-healed
+	through the normal lifecycle -- e.g. one stuck "In Progress" because its background
+	job crashed before this app's crash-recovery was deployed (see
+	TestBatchJobFailureRecovery), or one that hit MAX_AUTO_RETRIES and was marked Failed
+	while the underlying cause has since cleared. Always resumes from the last saved
+	cursor rather than starting over.
+	"""
+
+	def setUp(self):
+		super().setUp()
+		self._commit_patch = patch.object(frappe.db, "commit", lambda *a, **kw: None)
+		self._commit_patch.start()
+		self._migration_logs = []
+
+	def tearDown(self):
+		for name in self._migration_logs:
+			try:
+				frappe.delete_doc("Cloud Storage Migration Log", name, force=True, ignore_permissions=True)
+			except Exception:
+				pass
+		self._commit_patch.stop()
+		super().tearDown()
+
+	def _make_log(self, status, retry_count=0, cursor="some-cursor"):
+		log = frappe.get_doc(
+			{
+				"doctype": "Cloud Storage Migration Log",
+				"status": status,
+				"retry_count": retry_count,
+				"cursor": cursor,
+			}
+		).insert(ignore_permissions=True)
+		self._migration_logs.append(log.name)
+		return log
+
+	def test_resume_from_failed_requeues_from_last_cursor_and_resets_retries(self):
+		log = self._make_log(status="Failed", retry_count=migration.MAX_AUTO_RETRIES)
+
+		enqueued = []
+		with patch.object(migration, "_enqueue_batch", enqueued.append):
+			result = migration.resume_migration(log.name)
+
+		log.reload()
+		self.assertEqual(result, "Queued")
+		self.assertEqual(log.status, "Queued")
+		self.assertEqual(log.retry_count, 0)
+		self.assertEqual(log.cursor, "some-cursor")
+		self.assertEqual(enqueued, [log.name])
+
+	def test_resume_from_orphaned_in_progress_is_allowed(self):
+		"""The exact shape of the production incident: a run stuck "In Progress" with no
+		worker actually processing it any more."""
+		log = self._make_log(status="In Progress")
+
+		enqueued = []
+		with patch.object(migration, "_enqueue_batch", enqueued.append):
+			migration.resume_migration(log.name)
+
+		log.reload()
+		self.assertEqual(log.status, "Queued")
+		self.assertEqual(enqueued, [log.name])
+
+	def test_resume_from_completed_is_rejected(self):
+		log = self._make_log(status="Completed")
+
+		with patch.object(migration, "_enqueue_batch") as mock_enqueue:
+			with self.assertRaises(frappe.ValidationError):
+				migration.resume_migration(log.name)
+		mock_enqueue.assert_not_called()
+
+		log.reload()
+		self.assertEqual(log.status, "Completed")
+
+	def test_resume_from_cancelled_is_rejected(self):
+		log = self._make_log(status="Cancelled")
+
+		with patch.object(migration, "_enqueue_batch") as mock_enqueue:
+			with self.assertRaises(frappe.ValidationError):
+				migration.resume_migration(log.name)
+		mock_enqueue.assert_not_called()
+
+	def test_cancel_and_resume_are_whitelisted(self):
+		"""Both are invoked from the Desk form via frappe.call() (see
+		cloud_storage_migration_log.js) -- without @frappe.whitelist() they 404 on click."""
+		self.assertIn(migration.cancel_migration, frappe.whitelisted)
+		self.assertIn(migration.resume_migration, frappe.whitelisted)

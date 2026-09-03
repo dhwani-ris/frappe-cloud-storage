@@ -9,12 +9,15 @@ import frappe
 from . import controller
 
 BATCH_SIZE = 200
+LINK_BATCH_SIZE = 5000
 SCAN_BATCH_SIZE = 1000
 JOB_TIMEOUT = 3600
 MAX_STORED_ERRORS = 50
+MAX_AUTO_RETRIES = 3
 
 ACTIVE_STATUSES = ("Queued", "In Progress", "Cancelling")
 TERMINAL_STATUSES = ("Completed", "Completed with Errors", "Failed", "Cancelled")
+RESUMABLE_STATUSES = (*ACTIVE_STATUSES, "Failed")
 
 MIGRATION_TYPES = (
 	"Upload Local Files",
@@ -28,7 +31,18 @@ def start_migration(migration_type="Upload Local Files", bucket_type=None):
 	log = frappe.new_doc("Cloud Storage Migration Log")
 	log.status = "Queued"
 	log.migration_type = migration_type
-	log.batch_size = SCAN_BATCH_SIZE if migration_type == "Scan Bucket Index" else BATCH_SIZE
+	# Link Existing Objects never uploads or touches disk -- it only resolves against the
+	# already-scanned Cloud Storage Object Index and does a plain UPDATE (see
+	# controller.link_existing_object(..., verify=False)), so it can afford a much
+	# bigger batch than Upload Local Files, which does a real per-row upload to the
+	# bucket. Looked up as bare names (not a dict built once at import time) so tests
+	# can patch.object(migration, "BATCH_SIZE"/"SCAN_BATCH_SIZE"/"LINK_BATCH_SIZE", ...).
+	if migration_type == "Scan Bucket Index":
+		log.batch_size = SCAN_BATCH_SIZE
+	elif migration_type in ("Link Existing Objects (Files)", "Link Existing Objects (Attach Fields)"):
+		log.batch_size = LINK_BATCH_SIZE
+	else:
+		log.batch_size = BATCH_SIZE
 	log.bucket_type = bucket_type
 	log.cursor = ""
 	log.started_by = frappe.session.user
@@ -38,11 +52,42 @@ def start_migration(migration_type="Upload Local Files", bucket_type=None):
 	return log.name
 
 
-def cancel_migration(migration_log):
+@frappe.whitelist()
+def cancel_migration(migration_log: str):
 	log = frappe.get_doc("Cloud Storage Migration Log", migration_log)
 	if log.status in ("Queued", "In Progress"):
 		log.status = "Cancelling"
 		log.save(ignore_permissions=True)
+	return log.status
+
+
+@frappe.whitelist()
+def resume_migration(migration_log: str):
+	"""Manually resume a run that hasn't self-healed through the normal lifecycle --
+	e.g. a run stuck "In Progress" because its background job crashed outright before
+	this app's automatic crash-recovery (handle_batch_job_failure) was deployed, or a
+	run that hit MAX_AUTO_RETRIES and was marked Failed while the underlying cause (a DB
+	restart, a network blip) has since cleared. Always resumes from the run's last saved
+	cursor -- it never restarts a run from scratch.
+
+	Only call this once you're sure no worker is still genuinely processing this run
+	(e.g. after restarting workers, or for a run already sitting at Failed) -- calling it
+	on a run that IS still actively running starts a second job racing the first over the
+	same rows.
+	"""
+	log = frappe.get_doc("Cloud Storage Migration Log", migration_log)
+	if log.status not in RESUMABLE_STATUSES:
+		frappe.throw(
+			frappe._("Cannot resume a run with status {0}; only {1} runs can be resumed.").format(
+				log.status, ", ".join(RESUMABLE_STATUSES)
+			)
+		)
+	log.status = "Queued"
+	log.retry_count = 0
+	log.save(ignore_permissions=True)
+	frappe.db.commit()  # nosemgrep
+	_enqueue_batch(log.name)
+	frappe.db.commit()  # nosemgrep
 	return log.status
 
 
@@ -237,7 +282,7 @@ def _run_link_files_batch(log, config):
 		_append_error(log, None, "Could not initialise a cloud backend")
 		return True
 
-	batch_size = log.batch_size or BATCH_SIZE
+	batch_size = log.batch_size or LINK_BATCH_SIZE
 	rows = frappe.db.sql(
 		"""
 		SELECT name, file_url, file_name, is_private, attached_to_doctype, attached_to_name
@@ -326,7 +371,7 @@ def _run_link_attach_fields_batch(log, config):
 		return True
 
 	target_idx, record_cursor = _parse_attach_cursor(log.cursor)
-	batch_size = log.batch_size or BATCH_SIZE
+	batch_size = log.batch_size or LINK_BATCH_SIZE
 	processed = 0
 
 	while processed < batch_size and target_idx < len(targets):
@@ -585,7 +630,70 @@ def _enqueue_batch(migration_log):
 		timeout=JOB_TIMEOUT,
 		migration_log=migration_log,
 		enqueue_after_commit=True,
+		on_failure="multi_cloud_storage.migration.handle_batch_job_failure",
 	)
+
+
+def handle_batch_job_failure(job, connection, type, value, traceback):
+	"""Registered as on_failure on every batch's background job (see _enqueue_batch).
+
+	run_batch() already isolates per-row errors (_process_row, _resolve_and_link_file_row,
+	_resolve_and_link_attach_row all catch their own exceptions), so those never reach
+	here. This exists for the case that actually happened in production: the whole batch
+	dies outright -- e.g. the DB connection itself is lost mid-query ("Lost connection to
+	server during query" / "Server has gone away") -- so run_batch() never gets back to
+	log.save()/_finalize(), AND Frappe's own execute_job() wrapper then fails too (it tries
+	frappe.db.rollback() on that same dead connection and raises again before it can log
+	anything). Nothing ever moves the Migration Log out of "In Progress".
+
+	RQ invokes on_failure for every crashed job unconditionally, and by the time it runs,
+	execute_job()'s finally block has already called frappe.destroy() (releasing whatever
+	killed the old connection), so frappe.connect() below always starts a fresh connection
+	-- this does not depend on, or need to repair, whatever failed above.
+	"""
+	site = job.kwargs.get("site")
+	migration_log = (job.kwargs.get("kwargs") or {}).get("migration_log")
+	if not site or not migration_log:
+		return
+
+	frappe.init(site=site, force=True)
+	try:
+		frappe.connect()
+		recover_or_fail_migration(migration_log, f"{type.__name__}: {value}")
+		frappe.db.commit()  # nosemgrep
+	except Exception:
+		frappe.log_error(title=f"MultiCloud Storage: could not recover migration {migration_log}")
+	finally:
+		frappe.destroy()
+
+
+def recover_or_fail_migration(migration_log, error_message):
+	"""The actual recovery decision behind handle_batch_job_failure, split out so it can
+	be tested without going through frappe.init/connect/destroy. Idempotent: does nothing
+	if the log has already reached a terminal status through the normal path (e.g. the
+	crash raced with a legitimate finish), and never touches the same run more than
+	MAX_AUTO_RETRIES times, so a systemic failure (e.g. the DB being down entirely) fails
+	the run outright instead of retrying forever.
+	"""
+	if not frappe.db.exists("Cloud Storage Migration Log", migration_log):
+		return
+
+	log = frappe.get_doc("Cloud Storage Migration Log", migration_log)
+	if log.status in TERMINAL_STATUSES:
+		return
+
+	_append_error(log, None, f"Background job crashed: {error_message}")
+
+	if (log.retry_count or 0) < MAX_AUTO_RETRIES:
+		log.retry_count = (log.retry_count or 0) + 1
+		log.status = "Queued"
+		log.save(ignore_permissions=True)
+		_enqueue_batch(log.name)
+	else:
+		log.status = "Failed"
+		log.ended_on = frappe.utils.now_datetime()
+		log.save(ignore_permissions=True)
+		_publish_progress(log)
 
 
 _BATCH_HANDLERS = {
